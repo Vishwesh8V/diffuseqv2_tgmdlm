@@ -17,8 +17,8 @@ if __name__ == '__main__':
     parser.add_argument('--bsz', type=int, default=50, help='batch size')
     parser.add_argument('--start_n', type=int, default=0, help='start batch iteration')
     parser.add_argument('--split', type=str, default='test', choices=['train', 'valid', 'test'], help='dataset split used to decode')
-
-    parser.add_argument('--top_p', type=int, default=-1, help='top p used in sampling, default is off')
+    #ADDED top_p to type float from int 
+    parser.add_argument('--top_p', type=float, default=-1, help='top p used in sampling, default is off')
     parser.add_argument('--pattern', type=str, default='ema', help='training pattern')
     
     args = parser.parse_args()

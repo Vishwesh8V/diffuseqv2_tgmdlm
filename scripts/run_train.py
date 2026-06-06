@@ -46,6 +46,10 @@ if __name__ == '__main__':
 
     parser.add_argument('--config_name', type=str, default='bert-base-uncased', help='config of pre-trained models')
     parser.add_argument('--vocab', type=str, default='bert', help='use bert vocab or load external vocab dict if given as path')
+    #NEW CHAANGE-----------
+    parser.add_argument('--smiles_vocab_path', type=str, default='./datasets/generate_vocab.txt', help='path to smiles vocab')
+    parser.add_argument('--scibert_path', type=str, default='allenai/scibert_scivocab_uncased', help='path to scibert')
+    #------------------------------------
     parser.add_argument('--use_plm_init', type=str, default='no', choices=['no', 'bert'], help='load init parameter from the pre-trained lm')
 
     parser.add_argument('--notes', type=str, default='-', help='as training notes or specifical args')
@@ -76,12 +80,14 @@ if __name__ == '__main__':
     if int(os.environ['LOCAL_RANK']) == 0:
         if not os.path.isdir(Model_FILE):
             os.mkdir(Model_FILE)
-
-    COMMANDLINE = f" OPENAI_LOGDIR={Model_FILE}  " \
+    # ADDED f"--smiles_vocab_path {args.smiles_vocab_path} --scibert_path {args.scibert_path} " \
+    COMMANDLINE = f"OPENAI_LOGDIR={Model_FILE}  " \
                   f"TOKENIZERS_PARALLELISM=false " \
                   f"python train.py   " \
                   f"--checkpoint_path {Model_FILE} " \
-                  f"--dataset {args.dataset} --data_dir {args.data_dir} --data_split_num {args.data_split_num} --vocab {args.vocab} --use_plm_init {args.use_plm_init} " \
+                  f"--dataset {args.dataset} --data_dir {args.data_dir} --data_split_num {args.data_split_num} --vocab {args.vocab}" \
+                  f" --smiles_vocab_path {args.smiles_vocab_path} --scibert_path {args.scibert_path} " \
+                  f"--use_plm_init {args.use_plm_init} " \
                   f"--lr {args.lr} --use_fp16 {args.use_fp16} " \
                   f"--batch_size {args.bsz} --microbatch {args.microbatch} " \
                   f"--diffusion_steps {args.diff_steps} " \

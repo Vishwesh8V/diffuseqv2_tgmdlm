@@ -210,6 +210,12 @@ class TrainLoop:
             self.save()
 
     def run_step(self, batch, cond):
+
+        # batch is now raw input_ids (bsz, seq_len)
+        # Move embedding lookup to GPU in batches
+        with th.no_grad():
+            batch = self.model.word_embedding(batch.to(dist_util.dev()))
+
         self.forward_backward(batch, cond)
         if self.use_fp16:
             self.optimize_fp16()
@@ -219,9 +225,13 @@ class TrainLoop:
 
     def forward_only(self, batch, cond):
         with th.no_grad():
+             # batch is now raw input_ids
+            batch = self.model.word_embedding(batch.to(dist_util.dev()))
+
             zero_grad(self.model_params)
             for i in range(0, batch.shape[0], self.microbatch):
-                micro = batch[i: i + self.microbatch].to(dist_util.dev())
+                # micro = batch[i: i + self.microbatch].to(dist_util.dev())
+                micro = batch[i: i + self.microbatch]
                 micro_cond = {
                     k: v[i: i + self.microbatch].to(dist_util.dev())
                     for k, v in cond.items()
@@ -251,7 +261,8 @@ class TrainLoop:
     def forward_backward(self, batch, cond):
         zero_grad(self.model_params)
         for i in range(0, batch.shape[0], self.microbatch):
-            micro = batch[i : i + self.microbatch].to(dist_util.dev())
+            # micro = batch[i : i + self.microbatch].to(dist_util.dev())
+            micro = batch[i : i + self.microbatch] # Already on dev from run_step
             micro_cond = {
                 k: v[i : i + self.microbatch].to(dist_util.dev())
                 for k, v in cond.items()

@@ -58,7 +58,8 @@ def load_data_text(
             # drop_last=True,
             sampler=sampler,
             # shuffle=not deterministic,
-            num_workers=4,
+            num_workers=16,
+            pin_memory=True
         )
     else:
         data_loader = DataLoader(
@@ -67,7 +68,8 @@ def load_data_text(
             # drop_last=True,
             # sampler=sampler,
             shuffle=not deterministic,
-            num_workers=4,
+            num_workers=16,
+            pin_memory=True
         )
 
     if loop:
@@ -88,8 +90,8 @@ def helper_tokenize(sentence_lst, vocab_dict, seq_len):
     print(f"RAM used: {psutil.Process().memory_info().rss / (1024 * 1024):.2f} MB")
 
     def tokenize_function(examples):
-        input_id_x = vocab_dict.encode_token(examples['src'])
-        input_id_y = vocab_dict.encode_token(examples['trg'])
+        input_id_x = vocab_dict.encode_src(examples['src'])
+        input_id_y = vocab_dict.encode_trg(examples['trg'])
         result_dict = {'input_id_x': input_id_x, 'input_id_y': input_id_y}
 
         return result_dict
@@ -285,19 +287,24 @@ class TextDataset(Dataset):
         return self.length
 
     def __getitem__(self, idx):
-        with torch.no_grad():
+        # with torch.no_grad():
+        input_ids = np.array(self.text_datasets['train'][idx]['input_ids'])
+        input_mask = np.array(self.text_datasets['train'][idx]['input_mask'])
 
-            input_ids = self.text_datasets['train'][idx]['input_ids']
-            hidden_state = self.model_emb(torch.tensor(input_ids))
+            # input_ids = self.text_datasets['train'][idx]['input_ids']
+            # hidden_state = self.model_emb(torch.tensor(input_ids))
+        out_kwargs = {}
+        out_kwargs['input_ids'] = input_ids
+        out_kwargs['input_mask'] = input_mask
 
-            # obtain the input vectors, only used when word embedding is fixed (not trained end-to-end)
-            arr = np.array(hidden_state, dtype=np.float32)
+            # # obtain the input vectors, only used when word embedding is fixed (not trained end-to-end)
+            # arr = np.array(hidden_state, dtype=np.float32)
+        return input_ids, out_kwargs
+            # out_kwargs = {}
+            # out_kwargs['input_ids'] = np.array(self.text_datasets['train'][idx]['input_ids'])
+            # out_kwargs['input_mask'] = np.array(self.text_datasets['train'][idx]['input_mask'])
 
-            out_kwargs = {}
-            out_kwargs['input_ids'] = np.array(self.text_datasets['train'][idx]['input_ids'])
-            out_kwargs['input_mask'] = np.array(self.text_datasets['train'][idx]['input_mask'])
-
-            return arr, out_kwargs
+            # return arr, out_kwargs
 
 def _collate_batch_helper(examples, pad_token_id, max_length, return_mask=False):
     result = torch.full([len(examples), max_length], pad_token_id, dtype=torch.int64).tolist()

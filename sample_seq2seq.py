@@ -29,7 +29,8 @@ from basic_utils import (
 )
 
 def create_argparser():
-    defaults = dict(model_path='', step=0, out_dir='', top_p=0, rejection_rate=0.0, note='none')
+    #ADDED top_p from 0 to 0.0
+    defaults = dict(model_path='', step=0, out_dir='', top_p=0.0, rejection_rate=0.0, note='none')
     decode_defaults = dict(split='valid', clamp_step=0, seed2=105, clip_denoised=False, start_n=0)
     defaults.update(load_defaults_config())
     defaults.update(decode_defaults)
@@ -65,7 +66,8 @@ def main():
     )
 
     model.load_state_dict(
-        dist_util.load_state_dict(args.model_path, False, "model", map_location="cpu")
+        # dist_util.load_state_dict(args.model_path, False, "model", map_location="cpu")
+        dist_util.load_state_dict(args.model_path, map_location="cpu")
     )
 
     pytorch_total_params = sum(p.numel() for p in model.parameters())
@@ -128,6 +130,8 @@ def main():
             if idx % world_size == rank:  # Split data per nodes
                 all_test_data.append(cond)
             idx += 1
+            if idx >= 500:
+                break
 
     except StopIteration:
         print('### End of reading iteration...')

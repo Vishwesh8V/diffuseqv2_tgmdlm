@@ -36,6 +36,11 @@ def main():
     set_seed(args.seed) 
     dist_util.setup_dist()
     logger.configure()
+    #NEW CHANGE -----
+    if int(os.environ.get('LOCAL_RANK', 0)) == 0:
+        if not os.path.exists(args.checkpoint_path):
+            os.makedirs(args.checkpoint_path)
+    #-----------------
     logger.log("### Creating data loader...")
 
     tokenizer = load_tokenizer(args)
