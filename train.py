@@ -41,6 +41,7 @@ def main():
         if not os.path.exists(args.checkpoint_path):
             os.makedirs(args.checkpoint_path)
     #-----------------
+    args.save_dir = args.checkpoint_path # Important for adaptive noisin
     logger.log("### Creating data loader...")
 
     tokenizer = load_tokenizer(args)

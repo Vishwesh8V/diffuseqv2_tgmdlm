@@ -7,9 +7,11 @@ Docstrings have been added, as well as DDIM sampling and a new collection of bet
 
 import enum
 import math
+import os
 
 import numpy as np
 import torch as th
+import torch.distributed as dist
 import sys
 sys.path.append('.')
 
@@ -114,6 +116,10 @@ class GaussianDiffusion:
         denoise_rate = 0.2,
         device="",
         max_T = 2000,
+        token_max_length = None,
+        save_dir = None,
+        loss_update_granu=None,
+        schedule_update_stride=0,
     ):
         self.rescale_timesteps = rescale_timesteps
         self.predict_xstart = predict_xstart
@@ -127,19 +133,43 @@ class GaussianDiffusion:
         self.denoise_rate = denoise_rate
         self.max_T = max_T
 
+        self.token_max_length = token_max_length
+        self.save_dir = save_dir
+        self.device = device
+
         # Use float64 for accuracy.
         betas = np.array(betas, dtype=np.float64)
         self.betas = betas
-        assert len(betas.shape) == 1, "betas must be 1-D"
+        # assert len(betas.shape) == 1, "betas must be 1-D"
         # assert (betas > 0).all() and (betas <= 1).all()
 
         self.num_timesteps = int(betas.shape[0])
 
+        if loss_update_granu is not None:
+            self._loss_interp_granu = int(loss_update_granu)
+            self._loss_history_update_stride = schedule_update_stride
+            self._loss_history = np.ones((self.num_timesteps//self._loss_interp_granu,self.token_max_length)) * np.linspace(0, 0.5, self.num_timesteps//self._loss_interp_granu)[:,None]
+            self._loss_history_count = np.ones((self.num_timesteps//self._loss_interp_granu,self.token_max_length))
+        else:
+            self._loss_interp_granu = None
+                                          
         alphas = 1.0 - betas
+
+        if self.token_max_length is not None and len(alphas.shape) < 2:
+            alphas = np.expand_dims(alphas, 1)
+            alphas = np.tile(alphas, (1, self.token_max_length))
+            betas = 1.0 - alphas
+        
         self.alphas_cumprod = np.cumprod(alphas, axis=0)
-        self.alphas_cumprod_prev = np.append(1.0, self.alphas_cumprod[:-1])
-        self.alphas_cumprod_next = np.append(self.alphas_cumprod[1:], 0.0)
-        assert self.alphas_cumprod_prev.shape == (self.num_timesteps,)
+
+        if self.token_max_length is not None:
+            self.alphas_cumprod_prev = np.vstack((np.ones((1,self.token_max_length)), self.alphas_cumprod[:-1]))
+            self.alphas_cumprod_next = np.vstack((self.alphas_cumprod[1:], np.zeros((1,self.token_max_length))))
+        else:
+            self.alphas_cumprod_prev = np.append(1.0, self.alphas_cumprod[:-1])
+            self.alphas_cumprod_next = np.append(self.alphas_cumprod[1:], 0.0)
+
+        assert self.alphas_cumprod_prev.shape == self.alphas_cumprod.shape
 
         # calculations for diffusion q(x_t | x_{t-1}) and others
         self.sqrt_alphas_cumprod = np.sqrt(self.alphas_cumprod)
@@ -154,9 +184,15 @@ class GaussianDiffusion:
         )
         # log calculation clipped because the posterior variance is 0 at the
         # beginning of the diffusion chain.
-        self.posterior_log_variance_clipped = np.log(
-            np.append(self.posterior_variance[1], self.posterior_variance[1:])
-        )
+        if self.token_max_length is not None:
+            self.posterior_log_variance_clipped = np.log(
+                np.vstack((self.posterior_variance[1:2], self.posterior_variance[1:]))
+                )
+        else:
+            self.posterior_log_variance_clipped = np.log(
+                np.append(self.posterior_variance[1], self.posterior_variance[1:])
+            )
+        
         self.posterior_mean_coef1 = (
             betas * np.sqrt(self.alphas_cumprod_prev) / (1.0 - self.alphas_cumprod)
         )
@@ -165,25 +201,134 @@ class GaussianDiffusion:
             * np.sqrt(alphas)
             / (1.0 - self.alphas_cumprod)
         )
-
-        self.model_variance = np.append(self.posterior_variance[1], self.betas[1:])
-        self.model_log_variance = np.log(np.append(self.posterior_variance[1], self.betas[1:]))
+        if self.token_max_length is not None:
+            self.model_variance = np.vstack((self.posterior_variance[1:2], betas[1:]))
+            self.model_log_variance = np.log(self.model_variance)
+        else:
+            self.model_variance = np.append(self.posterior_variance[1], self.betas[1:])
+            self.model_log_variance = np.log(np.append(self.posterior_variance[1], self.betas[1:]))
 
         self.mapping_func = None # implement in train main()
         self.add_mask_noise = False # TODO
 
-        # presaved as tensor
-        self.sqrt_alphas_cumprod = th.from_numpy(self.sqrt_alphas_cumprod).to(device=device)
-        self.sqrt_one_minus_alphas_cumprod = th.from_numpy(self.sqrt_one_minus_alphas_cumprod).to(device=device)
-        self.log_one_minus_alphas_cumprod = th.from_numpy(self.log_one_minus_alphas_cumprod).to(device=device)
-        self.sqrt_recip_alphas_cumprod = th.from_numpy(self.sqrt_recip_alphas_cumprod).to(device=device)
-        self.sqrt_recipm1_alphas_cumprod = th.from_numpy(self.sqrt_recipm1_alphas_cumprod).to(device=device)
-        self.posterior_variance = th.from_numpy(self.posterior_variance).to(device=device)
-        self.posterior_log_variance_clipped = th.from_numpy(self.posterior_log_variance_clipped).to(device=device)
-        self.posterior_mean_coef1 = th.from_numpy(self.posterior_mean_coef1).to(device=device)
-        self.posterior_mean_coef2 = th.from_numpy(self.posterior_mean_coef2).to(device=device)
-        self.model_log_variance = th.from_numpy(self.model_log_variance).to(device=device)
-        self.model_variance = th.from_numpy(self.model_variance).to(device=device)
+        self.update_time_discretized_parameters(self.alphas_cumprod)
+
+    def update_time_discretized_parameters(self, alphas_cumprod):
+        if self.token_max_length is not None:
+            self.alphas_cumprod[:, 1:] = alphas_cumprod[:, 1:]
+        else:
+            self.alphas_cumprod = alphas_cumprod
+        
+        alphas = np.zeros_like(self.alphas_cumprod)
+        for i in range(len(alphas_cumprod)):
+            if i == 0:
+                alphas[i] = self.alphas_cumprod[i]
+            else:
+                alphas[i]  = self.alphas_cumprod[i]/ self.alphas_cumprod[i-1]
+        betas = 1.0-alphas
+
+        if self.token_max_length is not None:
+            self.alphas_cumprod_prev = np.vstack((np.ones((1,self.token_max_length)), self.alphas_cumprod[:-1]))
+            self.alphas_cumprod_next = np.vstack((self.alphas_cumprod[1:], np.zeros((1, self.token_max_length))))
+        else:
+            self.alphas_cumprod_prev = np.append(1.0, self.alphas_cumprod[:-1])
+            self.alphas_cumprod_next = np.append(self.alphas_cumprod[1:], 0.0)
+
+        self.sqrt_alphas_cumprod = th.from_numpy(np.sqrt(self.alphas_cumprod)).to(device=self.device).float()
+        self.sqrt_one_minus_alphas_cumprod = th.from_numpy(np.sqrt(1.0 - self.alphas_cumprod)).to(device=self.device).float()
+        self.log_one_minus_alphas_cumprod = th.from_numpy(np.log(1.0 - self.alphas_cumprod)).to(device=self.device).float()
+        self.sqrt_recip_alphas_cumprod = th.from_numpy(np.sqrt(1.0 / self.alphas_cumprod)).to(device=self.device).float()
+        self.sqrt_recipm1_alphas_cumprod = th.from_numpy(np.sqrt(1.0 / self.alphas_cumprod - 1)).to(device=self.device).float()
+             
+        self.posterior_variance = (
+            betas * (1.0 - self.alphas_cumprod_prev) / (1.0 - self.alphas_cumprod)
+        )
+        if self.token_max_length is not None:
+            self.posterior_log_variance_clipped = th.from_numpy(np.log(
+                np.maximum(np.vstack((self.posterior_variance[1:2], self.posterior_variance[1:])), 1e-9)
+            )).to(device=self.device).float()
+        else:
+            self.posterior_log_variance_clipped = th.from_numpy(np.log(
+                np.append(self.posterior_variance[1], self.posterior_variance[1:])
+            )).to(device=self.device).float()
+
+        self.posterior_mean_coef1 = th.from_numpy(
+            betas * np.sqrt(self.alphas_cumprod_prev) / (1.0 - self.alphas_cumprod)
+        ).to(device=self.device).float()
+        self.posterior_mean_coef2 = th.from_numpy(
+            (1.0 - self.alphas_cumprod_prev)
+            * np.sqrt(alphas)
+            / (1.0 - self.alphas_cumprod)
+        ).to(device=self.device).float()
+
+        if self.token_max_length is not None:
+            self.model_variance = th.from_numpy(np.vstack((self.posterior_variance[1:2], betas[1:]))).to(device=self.device).float()
+            self.model_log_variance = th.log(self.model_variance)
+        else:
+            self.model_variance = th.from_numpy(np.append(self.posterior_variance[1], betas[1:])).to(device=self.device).float()
+            self.model_log_variance = th.log(self.model_variance)
+        
+        self.posterior_variance = th.from_numpy(self.posterior_variance).to(device=self.device).float()
+    def _load_time_schedule(self, path):
+        if os.path.exists(path):
+            alphas_cumprod = np.load(path)
+            self.update_time_discretized_parameters(alphas_cumprod)
+        else:
+            print(f"Warning: schedule file {path} not found. Using default schedule.")
+    def _loss_history_update(self, ts, losses, loss_masks, training_step):
+        if self._loss_interp_granu is None:
+            return
+            
+        all_losses = []
+        losses_gather_buffer = [th.zeros_like(losses) for _ in range(dist.get_world_size())]
+        dist.all_gather(losses_gather_buffer, losses.detach())
+        all_losses.extend([sample.cpu().numpy() for sample in losses_gather_buffer])
+        all_losses = np.concatenate(all_losses, axis=0) #BXS
+
+        all_loss_masks = []
+        loss_masks_gather_buffer = [th.zeros_like(loss_masks) for _ in range(dist.get_world_size())]
+        dist.all_gather(loss_masks_gather_buffer, loss_masks.detach())
+        all_loss_masks.extend([sample.cpu().numpy() for sample in loss_masks_gather_buffer])
+        all_loss_masks = np.concatenate(all_loss_masks, axis=0) #BxS
+
+        all_ts = []
+        ts_gather_buffer = [th.zeros_like(ts) for _ in range(dist.get_world_size())]
+        dist.all_gather(ts_gather_buffer, ts.detach())
+        all_ts.extend([sample.cpu().numpy() for sample in ts_gather_buffer])
+        all_ts = np.concatenate(all_ts, axis=0) #B
+
+        all_ts = all_ts // self._loss_interp_granu
+        
+        for t, loss, loss_m in zip(all_ts, all_losses, all_loss_masks):
+            self._loss_history[t] += loss
+            self._loss_history_count[t] += loss_m.astype(float)
+
+        if training_step >= (self._loss_history_update_stride*3) and training_step % self._loss_history_update_stride == 0:
+            interp_alpha_cumprod = []
+            loss_dist = self._loss_history / self._loss_history_count # TxS
+            for i in range(loss_dist.shape[0]):
+                if i > 0:
+                    loss_dist[i, :] = np.max([loss_dist[i, :], loss_dist[i-1, :]+1e-5], axis=0)
+            loss_dist = np.vstack([loss_dist[:1, :]-(loss_dist[1:2, :]-loss_dist[:1, :])/2, loss_dist, loss_dist[-1:, :]+(loss_dist[-1:, :]-loss_dist[-2:-1, :])/2])
+
+            for s in range(loss_dist.shape[1]):
+                loss_val = np.linspace(np.min(loss_dist[:, s])-1e-5, np.max(loss_dist[:, s])+1e-5, self.num_timesteps)
+                alpha_cumprod_dist = np.mean(self.alphas_cumprod[:, s].reshape(-1, self._loss_interp_granu), axis=1)
+                alpha_cumprod_dist = np.append(np.max(self.alphas_cumprod), alpha_cumprod_dist)
+                alpha_cumprod_dist = np.append(alpha_cumprod_dist, np.min(self.alphas_cumprod))
+                interp_alpha_cumprod.append(np.interp(loss_val, loss_dist[:, s], alpha_cumprod_dist))
+
+            interp_alpha_cumprod = np.stack(interp_alpha_cumprod).transpose(1,0)
+            self.update_time_discretized_parameters(interp_alpha_cumprod)
+            
+            if dist.get_rank() == 0:
+                print('*'*10, f'updated alpha_cumprod to alpha_cumprod_step_{training_step}.npy', '*'*10)
+                np.save(os.path.join(self.save_dir, f'alpha_cumprod_step_{training_step}.npy'), self.alphas_cumprod)
+
+            self._loss_history = np.ones((self.num_timesteps//self._loss_interp_granu, self.token_max_length)) * np.linspace(0, 0.5, self.num_timesteps//self._loss_interp_granu)[:,None]
+            self._loss_history_count = np.ones((self.num_timesteps//self._loss_interp_granu, self.token_max_length))
+
+
 
     def training_losses(self, model, *args, **kwargs):
         self.model = model
@@ -618,7 +763,7 @@ class GaussianDiffusion:
 
         return {'pred_xprev':pred_prev, 'pred_xstart':pred_xstart}
 
-    def training_losses_seq2seq(self, model, x_start, t, model_kwargs=None, noise=None):
+    def training_losses_seq2seq(self, model, x_start, t, model_kwargs=None, noise=None, training_step=None):
         """
         Compute training losses for a single timestep.
 
@@ -652,12 +797,24 @@ class GaussianDiffusion:
         target = x_start
         model_output = model(x_t, self._scale_timesteps(t), **model_kwargs)
         assert model_output.shape == target.shape == x_start.shape
+        # Per-token loss calculation
+        mse_loss_per_token = th.mean((target - model_output) **2, dim=-1) #B, S
         terms["mse"] = mean_flat((target - model_output) ** 2)
 
         model_out_x_start = self._x0_helper(model_output, x_t, t)['pred_xstart'] # predicted_xstart = model_output
         t0_mask = (t == 0)
+        t0_loss_per_token = th.mean((x_start_mean - model_out_x_start) ** 2, dim=-1)
         t0_loss = mean_flat((x_start_mean - model_out_x_start) ** 2)
         terms["mse"] = th.where(t0_mask, t0_loss, terms["mse"])
+
+        # adaptive noise schedule logging part
+        if self._loss_interp_granu is not None and training_step is not None:
+            with th.no_grad():
+                _loss_log = mse_loss_per_token.detach()
+                _loss_log[t0_mask] = t0_loss_per_token[t0_mask].detach()
+                _loss_log[input_ids_mask == 0] = 0
+                self._loss_history_update(t, _loss_log, input_ids_mask.bool(), training_step)
+
 
         out_mean, _, _ = self.q_mean_variance(x_start, th.LongTensor([self.num_timesteps - 1]).to(x_start.device))
         tT_loss =  mean_flat(out_mean ** 2)

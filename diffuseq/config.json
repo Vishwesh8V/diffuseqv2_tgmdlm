@@ -44,5 +44,10 @@
   "denoise_rate": 0.2,
   "rejection_rate": 0.0,
   "reg_rate": 0.01,
-  "device": ""
+  "device": "",
+  "token_max_length": 128,
+  "save_dir": "",
+  "time_schedule_path": "",
+  "loss_update_granu": 20,
+  "schedule_update_stride": 2000
 }

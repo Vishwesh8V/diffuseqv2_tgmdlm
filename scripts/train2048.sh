@@ -1,4 +1,4 @@
-#RUN 2: 2048 bsz with no checkpoint
+#RUN 2: 2048 bsz 
 export OMP_NUM_THREADS=1
 torchrun \
     --nproc_per_node=8 \
@@ -6,7 +6,7 @@ torchrun \
     scripts/run_train.py \
     --diff_steps 2000 \
     --lr 0.0001 \
-    --learning_steps 50000 \
+    --learning_steps 200000 \
     --save_interval 10000 \
     --seed 102 \
     --noise_schedule sqrt \
@@ -22,6 +22,7 @@ torchrun \
     --scibert_path allenai/scibert_scivocab_uncased \
     --seq_len 128 \
     --schedule_sampler lossaware \
-    --notes smiles_caption_dual \
     --use_fp16 \
-    --notes "2048_bsz"
+    --notes 2048_adanoise_scratch_run \
+    --loss_update_granu 20 \
+    --schedule_update_stride 2000 

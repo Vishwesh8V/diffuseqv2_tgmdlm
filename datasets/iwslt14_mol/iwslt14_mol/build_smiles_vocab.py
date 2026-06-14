@@ -1,7 +1,7 @@
 """
 build_smiles_vocab.py
 ─────────────────────
-Scan your train/valid/test.jsonl files, collect every unique SMILES token
+Scan the train/valid/test.jsonl files, collect every unique SMILES token
 that appears in the 'trg' field, and write a vocab.json file that
 SmilesVocab (text_datasets.py) can load.
 

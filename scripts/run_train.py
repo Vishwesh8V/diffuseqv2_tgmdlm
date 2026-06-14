@@ -39,6 +39,7 @@ if __name__ == '__main__':
     parser.add_argument('--save_interval', type=int, default=10000, help='save step')
     parser.add_argument('--resume_checkpoint', type=str, default='none', help='path to resume checkpoint, like xxx/xxx.pt')
     parser.add_argument('--lr', type=float, default=1e-04, help='learning rate')
+    parser.add_argument('--gradient_clipping', type=float,default=-1.0, help='gradient clipping')
     parser.add_argument('--use_fp16', action='store_true', help='use fp16 or not')
     parser.add_argument('--bsz', type=int, default=64, help='batch size')
     parser.add_argument('--microbatch', type=int, default=64, help='microbatch size')
@@ -51,6 +52,10 @@ if __name__ == '__main__':
     parser.add_argument('--scibert_path', type=str, default='allenai/scibert_scivocab_uncased', help='path to scibert')
     #------------------------------------
     parser.add_argument('--use_plm_init', type=str, default='no', choices=['no', 'bert'], help='load init parameter from the pre-trained lm')
+
+    #Adaptive noising
+    parser.add_argument('--loss_update_granu', type=int, default=20, help='loss update granularity') 
+    parser.add_argument('--schedule_update_stride', type=int, default=2000, help='schedule update stride') 
 
     parser.add_argument('--notes', type=str, default='-', help='as training notes or specifical args')
     parser.add_argument('--app', type=str, default='', help='other input args')
@@ -96,10 +101,12 @@ if __name__ == '__main__':
                   f"--seq_len {args.seq_len} --hidden_t_dim {args.hidden_t_dim} --seed {args.seed} " \
                   f"--hidden_dim {args.hidden_dim} " \
                   f"--learning_steps {args.learning_steps} --save_interval {args.save_interval} " \
+                  f"--gradient_clipping {args.gradient_clipping} " \
                   f"--config_name {args.config_name} --notes {args.notes} " \
                   f"--learned_mean_embed {args.learned_mean_embed} " \
                   f"--denoise {args.denoise} --denoise_rate {args.denoise_rate} " \
-                  f"--reg_rate {args.reg_rate} "
+                  f"--reg_rate {args.reg_rate} " \
+                  f"--loss_update_granu {args.loss_update_granu} --schedule_update_stride {args.schedule_update_stride} "
 
     COMMANDLINE += " " + args.app
 

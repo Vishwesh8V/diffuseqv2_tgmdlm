@@ -218,6 +218,10 @@ def create_model_and_diffusion(
     rescale_learned_sigmas,
     use_kl,
     notes,
+    token_max_length,
+    save_dir,
+    loss_update_granu,
+    schedule_update_stride,
     learned_mean_embed=False,
     rejection_rate=0.0,
     denoise=False,
@@ -255,6 +259,10 @@ def create_model_and_diffusion(
         denoise_rate=denoise_rate,
         device=device,
         max_T = diffusion_steps,
+        token_max_length=token_max_length,
+        save_dir=save_dir,
+        loss_update_granu=loss_update_granu,
+        schedule_update_stride=schedule_update_stride,
     )
 
     return model, diffusion
@@ -286,3 +294,5 @@ def str2bool(v):
         return False
     else:
         raise argparse.ArgumentTypeError("boolean value expected")
+
+    #NEW SELFIES IMPLEMENTATION

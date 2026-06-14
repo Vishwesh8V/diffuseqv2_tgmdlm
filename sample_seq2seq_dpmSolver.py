@@ -30,7 +30,7 @@ from basic_utils import (
 )
 
 def create_argparser():
-    defaults = dict(model_path='', step=0, out_dir='', top_p=0, rejection_rate=0.0, note='none')
+    defaults = dict(model_path='', step=0, out_dir='', top_p=0, rejection_rate=0.0, note='none', time_schedule_path='')
     decode_defaults = dict(split='valid', clamp_step=0, seed2=105, clip_denoised=False, start_n=0)
     defaults.update(load_defaults_config())
     defaults.update(decode_defaults)
@@ -65,6 +65,10 @@ def main():
     model.load_state_dict(
         dist_util.load_state_dict(args.model_path, False, "amp", map_location="cpu")
     )
+
+    if args.time_schedule_path:
+    logger.log(f"### Loading time schedule from {args.time_schedule_path}...")
+    diffusion._load_time_schedule(args.time_schedule_path)
 
     pytorch_total_params = sum(p.numel() for p in model.parameters())
     logger.log(f'### The parameter count is {pytorch_total_params}')

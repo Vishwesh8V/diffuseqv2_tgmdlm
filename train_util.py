@@ -136,7 +136,7 @@ class TrainLoop:
 
         if resume_checkpoint[-3:] == '.pt':
             self.resume_step = parse_resume_step_from_filename(resume_checkpoint)
-            self.resume_step = 0
+            # self.resume_step = 0
             if dist.get_rank() == 0:
                 logger.log(f"loading model from checkpoint: {resume_checkpoint}...")
                 self.model.load_state_dict(
@@ -245,6 +245,8 @@ class TrainLoop:
                     micro,
                     t,
                     model_kwargs=micro_cond,
+                    training_step=self.step
+
                 )
 
                 if last_batch or not self.use_ddp:
@@ -282,6 +284,7 @@ class TrainLoop:
                         micro,
                         t,
                         model_kwargs=micro_cond,
+                        training_step=self.step
                     )
 
                     if last_batch or not self.use_ddp:
@@ -309,6 +312,8 @@ class TrainLoop:
                     micro,
                     t,
                     model_kwargs=micro_cond,
+                    training_step=self.step
+
                 )
 
                 if last_batch or not self.use_ddp:
@@ -329,6 +334,7 @@ class TrainLoop:
                 loss.backward()
 
     def optimize_fp16(self):
+        self.scaler.unscale_(self.opt)
         # if any(not th.isfinite(p.grad).all() for p in self.model_params):
         #     self.lg_loss_scale -= 1
         #     logger.log(f"Found NaN, decreased lg_loss_scale to {self.lg_loss_scale}")
