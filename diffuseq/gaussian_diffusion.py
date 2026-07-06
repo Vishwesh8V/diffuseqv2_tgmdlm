@@ -302,8 +302,11 @@ class GaussianDiffusion:
         for t, loss, loss_m in zip(all_ts, all_losses, all_loss_masks):
             self._loss_history[t] += loss
             self._loss_history_count[t] += loss_m.astype(float)
+        
+        #Warmup new implementation
+        warmup_steps = 20000
 
-        if training_step >= (self._loss_history_update_stride*3) and training_step % self._loss_history_update_stride == 0:
+        if training_step >= warmup_steps and (training_step - warmup_steps) % self._loss_history_update_stride ==0:
             interp_alpha_cumprod = []
             loss_dist = self._loss_history / self._loss_history_count # TxS
             for i in range(loss_dist.shape[0]):
@@ -319,7 +322,10 @@ class GaussianDiffusion:
                 interp_alpha_cumprod.append(np.interp(loss_val, loss_dist[:, s], alpha_cumprod_dist))
 
             interp_alpha_cumprod = np.stack(interp_alpha_cumprod).transpose(1,0)
-            self.update_time_discretized_parameters(interp_alpha_cumprod)
+            # Apply momentum smoothing to prevent training shocks (e.g. update_rate of 0.4)
+            update_rate = 0.5
+            smooth_alpha = (1.0 - update_rate) * self.alphas_cumprod + update_rate * interp_alpha_cumprod
+            self.update_time_discretized_parameters(smooth_alpha)
             
             if dist.get_rank() == 0:
                 print('*'*10, f'updated alpha_cumprod to alpha_cumprod_step_{training_step}.npy', '*'*10)
@@ -625,6 +631,7 @@ class GaussianDiffusion:
         :return: a non-differentiable batch of samples.
         """
         final = []
+        final_pred_xstart = []
         for sample in self.p_sample_loop_progressive(
             model,
             shape,
@@ -641,7 +648,8 @@ class GaussianDiffusion:
             x_start=x_start
         ):
             final.append(sample['sample'])
-        return final
+            final_pred_xstart.append(sample['pred_xstart'])
+        return final, final_pred_xstart
 
     def p_sample_loop_progressive(
         self,

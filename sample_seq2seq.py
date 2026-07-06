@@ -182,7 +182,7 @@ def main():
 
         sample_shape = (x_start.shape[0], args.seq_len, args.hidden_dim)
         with autocast():
-            samples = sample_fn(
+            samples, pred_xstart_list = sample_fn(
                 model,
                 sample_shape,
                 noise=x_noised,
@@ -196,10 +196,61 @@ def main():
                 x_start=x_start,
                 gap=step_gap
             )
-
+            # diagnostic block uses pred_xstart_list for logits, samples for zt
+            for step_idx, (zt, pred_x0) in enumerate(zip(samples, pred_xstart_list)):
+                zt_trajectory.append(zt[0, smiles_len:].cpu().numpy())         # noisy embedding
+                
+                step_logits = model.get_logits(pred_x0)                        # logits from clean x0
+                step_tokens = th.argmax(step_logits, dim=-1)
+                token_trajectory.append(step_tokens[0, smiles_len:].cpu().numpy())
+                
+                probs = th.softmax(step_logits[0, smiles_len:], dim=-1)
+                ent = -(probs * th.log(probs + 1e-10)).sum(dim=-1)
+                entropy_trajectory.append(ent.cpu().numpy())
         # model_emb_copy.cpu()
 
         # print(samples[0].shape) # samples for each step
+        # ADDED 24/06/2026: NEW CHANGE TO GET HEATMAP/trajectories of alpha values for each token in input sequence
+
+        # samples is a list of length num_steps, each element shape (bsz, seq_len, hidden_dim)
+        # We only need to do this for the first item in the batch for diagnostics
+
+        if args.note == 'debug':  # only run diagnostic mode when flagged
+            smiles_len = (input_ids_mask_ori[0] == 0).sum().item()  # SMILES positions
+            zt_trajectory = []
+            token_trajectory = []  # shape will be (num_steps, seq_len)
+            entropy_trajectory = []
+
+            for step_sample in samples:
+
+                zt_trajectory.append(step_sample[0, smiles_len:].cpu().numpy())
+                step_logits = model.get_logits(step_sample)  # (bsz, seq_len, vocab)
+                
+                # token predictions at this step
+                step_tokens = th.argmax(step_logits, dim=-1)  # (bsz, seq_len)
+                token_trajectory.append(step_tokens[0, smiles_len:].cpu().numpy())  # first item, caption only
+                
+                # per-position entropy
+                probs = th.softmax(step_logits[0, smiles_len:], dim=-1)  # (caption_len, vocab)
+                ent = -(probs * th.log(probs + 1e-10)).sum(dim=-1)  # (caption_len,)
+                entropy_trajectory.append(ent.cpu().numpy())
+            
+            token_trajectory = np.array(token_trajectory)   # (num_steps, caption_len)
+            entropy_trajectory = np.array(entropy_trajectory)  # (num_steps, caption_len)
+            
+            # decode token ids to strings for labeling
+            ref_tokens = tokenizer.decode_token(input_ids_x[0, smiles_len:])
+            
+            # save for plotting
+            diag_path = out_path.replace('.json', '_diagnostics.npz')
+            np.savez(diag_path,
+                token_trajectory=token_trajectory,
+                entropy_trajectory=entropy_trajectory,
+                zt_trajectory=np.array(zt_trajectory),
+                smiles_len=smiles_len,
+                reference=np.array([ref_tokens])
+            )
+            print(f"Saved diagnostics to {diag_path}")
 
         sample = samples[-1]
 
@@ -216,13 +267,15 @@ def main():
         # tokenizer = load_tokenizer(args)
 
         for seq, input_mask in zip(cands.indices, input_ids_mask_ori):
-            len_x = args.seq_len - sum(input_mask).tolist()
+            non_zero_indices = (input_mask == 1).nonzero()
+            len_x = non_zero_indices[0].item() if len(non_zero_indices) > 0 else (args.seq_len - sum(input_mask).tolist())
             tokens = tokenizer.decode_token(seq[len_x:])
             word_lst_recover.append(tokens)
 
         for seq, input_mask in zip(input_ids_x, input_ids_mask_ori):
             # tokens = tokenizer.decode_token(seq)
-            len_x = args.seq_len - sum(input_mask).tolist()
+            non_zero_indices = (input_mask == 1).nonzero()
+            len_x = non_zero_indices[0].item() if len(non_zero_indices) > 0 else (args.seq_len - sum(input_mask).tolist())
             word_lst_source.append(tokenizer.decode_token(seq[:len_x]))
             word_lst_ref.append(tokenizer.decode_token(seq[len_x:]))
 

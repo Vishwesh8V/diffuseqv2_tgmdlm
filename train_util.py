@@ -199,7 +199,7 @@ class TrainLoop:
                 self.forward_only(batch_eval, cond_eval)
                 print('eval on validation set')
                 logger.dumpkvs()
-            if self.step > 0 and self.step % self.save_interval == 0:
+            if self.step % self.save_interval == 0:
                 self.save()
                 # Run for a finite amount of time in integration tests.
                 if os.environ.get("DIFFUSION_TRAINING_TEST", "") and self.step > 0:
@@ -245,7 +245,7 @@ class TrainLoop:
                     micro,
                     t,
                     model_kwargs=micro_cond,
-                    training_step=self.step
+                    training_step=self.step + self.resume_step
 
                 )
 
@@ -284,7 +284,7 @@ class TrainLoop:
                         micro,
                         t,
                         model_kwargs=micro_cond,
-                        training_step=self.step
+                        training_step=self.step+self.resume_step
                     )
 
                     if last_batch or not self.use_ddp:
@@ -312,7 +312,7 @@ class TrainLoop:
                     micro,
                     t,
                     model_kwargs=micro_cond,
-                    training_step=self.step
+                    training_step=self.step + self.resume_step
 
                 )
 

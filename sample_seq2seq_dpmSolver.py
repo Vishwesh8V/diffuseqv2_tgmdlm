@@ -204,13 +204,15 @@ def main():
         sample = cands.indices
 
         for seq, input_mask in zip(cands.indices, input_ids_mask_ori):
-            len_x = args.seq_len - sum(input_mask).tolist()
+            non_zero_indices = (input_mask == 1).nonzero()
+            len_x = non_zero_indices[0].item() if len(non_zero_indices) > 0 else (args.seq_len - sum(input_mask).tolist())
             tokens = tokenizer.decode_token(seq[len_x:])
             word_lst_recover.append(tokens)
 
         for seq, input_mask in zip(input_ids_x, input_ids_mask_ori):
             # tokens = tokenizer.decode_token(seq)
-            len_x = args.seq_len - sum(input_mask).tolist()
+            non_zero_indices = (input_mask == 1).nonzero()
+            len_x = non_zero_indices[0].item() if len(non_zero_indices) > 0 else (args.seq_len - sum(input_mask).tolist())
             word_lst_source.append(tokenizer.decode_token(seq[:len_x]))
             word_lst_ref.append(tokenizer.decode_token(seq[len_x:]))
 

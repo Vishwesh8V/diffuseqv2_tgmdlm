@@ -55,10 +55,9 @@ if __name__ == "__main__":
     # calculate_bleu_from_jsonl('../generation_outputs/diffuseq_iwslt14_mol_h128_lr0.0001_t2000_sqrt_lossaware_seed102_smiles_caption_dual20260604-12:00:49/ema_0.9999_030000.pt.samples/seed123_step0_eval_500samples_fixed.json')
     # calculate_bleu_from_jsonl('../generation_outputs/diffuseq_iwslt14_mol_h128_lr0.0001_t2000_sqrt_lossaware_seed102_smiles_caption_dual20260604-12:00:49/ema_0.9999_040000.pt.samples/seed123_step0_eval_500samples_fixed.json')
     # calculate_bleu_from_jsonl('../generation_outputs/diffuseq_iwslt14_mol_h128_lr0.0001_t2000_sqrt_lossaware_seed102_smiles_caption_dual20260604-12:00:49/ema_0.9999_050000.pt.samples/seed123_step0_eval_500samples_fixed.json')
-    # 50k checkpoint to 100k steps
-    calculate_bleu_from_jsonl('../generation_outputs/diffuseq_iwslt14_mol_h128_lr0.0001_t2000_sqrt_lossaware_seed102_smiles_caption_dual20260605-19:49:25/ema_0.9999_010000.pt.samples/seed123_step0_eval_50k_ckpt.json')
-    calculate_bleu_from_jsonl('../generation_outputs/diffuseq_iwslt14_mol_h128_lr0.0001_t2000_sqrt_lossaware_seed102_smiles_caption_dual20260605-19:49:25/ema_0.9999_020000.pt.samples/seed123_step0_eval_50k_ckpt.json')
-    calculate_bleu_from_jsonl('../generation_outputs/diffuseq_iwslt14_mol_h128_lr0.0001_t2000_sqrt_lossaware_seed102_smiles_caption_dual20260605-19:49:25/ema_0.9999_030000.pt.samples/seed123_step0_eval_50k_ckpt.json')
-    calculate_bleu_from_jsonl('../generation_outputs/diffuseq_iwslt14_mol_h128_lr0.0001_t2000_sqrt_lossaware_seed102_smiles_caption_dual20260605-19:49:25/ema_0.9999_040000.pt.samples/seed123_step0_eval_50k_ckpt.json')
-    calculate_bleu_from_jsonl('../generation_outputs/diffuseq_iwslt14_mol_h128_lr0.0001_t2000_sqrt_lossaware_seed102_smiles_caption_dual20260605-19:49:25/ema_0.9999_050000.pt.samples/seed123_step0_eval_50k_ckpt.json')
-    #2048 batchsize
+
+    calculate_bleu_from_jsonl('../generation_outputs/diffuseq_iwslt14_mol_h128_lr0.0001_t2000_sqrt_lossaware_seed102_adanoise_60k_110kckpts_10kstride20260614-18:54:53/ema_0.9999_069000.pt.samples/seed123_step0_adanoise_10kstride_60k_110k_ckpts_40kalpha.json')
+    calculate_bleu_from_jsonl('../generation_outputs/diffuseq_iwslt14_mol_h128_lr0.0001_t2000_sqrt_lossaware_seed102_adanoise_60k_110kckpts_10kstride20260614-18:54:53/ema_0.9999_079000.pt.samples/seed123_step0_adanoise_10kstride_60k_110k_ckpts_40kalpha.json')
+    calculate_bleu_from_jsonl('../generation_outputs/diffuseq_iwslt14_mol_h128_lr0.0001_t2000_sqrt_lossaware_seed102_adanoise_60k_110kckpts_10kstride20260614-18:54:53/ema_0.9999_089000.pt.samples/seed123_step0_adanoise_10kstride_60k_110k_ckpts_40kalpha.json')
+    calculate_bleu_from_jsonl('../generation_outputs/diffuseq_iwslt14_mol_h128_lr0.0001_t2000_sqrt_lossaware_seed102_adanoise_60k_110kckpts_10kstride20260614-18:54:53/ema_0.9999_099000.pt.samples/seed123_step0_adanoise_10kstride_60k_110k_ckpts_40kalpha.json')
+    calculate_bleu_from_jsonl('../generation_outputs/diffuseq_iwslt14_mol_h128_lr0.0001_t2000_sqrt_lossaware_seed102_adanoise_60k_110kckpts_10kstride20260614-18:54:53/ema_0.9999_109000.pt.samples/seed123_step0_adanoise_10kstride_60k_110k_ckpts_40kalpha.json')

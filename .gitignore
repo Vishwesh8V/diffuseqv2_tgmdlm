@@ -9,4 +9,5 @@ ckpts/*
 ckpts/
 *.pth
 *.pt
-*npy
+*.npy
+*.log

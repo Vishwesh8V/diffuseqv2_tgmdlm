@@ -97,6 +97,20 @@ def main():
 
     logger.log("### Training...")
 
+    if args.resume_checkpoint != 'none' and args.resume_checkpoint != '':
+        try:
+            from train_util import parse_resume_step_from_filename
+            resume_step = parse_resume_step_from_filename(args.resume_checkpoint)
+            resume_dir = os.path.dirname(args.resume_checkpoint)
+            potential_npy = os.path.join(resume_dir, f'alpha_cumprod_step_{resume_step}.npy')
+            if os.path.exists(potential_npy):
+                logger.log(f"### Resuming adaptive schedule from {potential_npy}")
+                diffusion._load_time_schedule(potential_npy)
+            else:
+                logger.log(f"### Warning: No matching schedule found at {potential_npy}. Starting with default.")
+        except Exception as e:
+            logger.log(f"### Error attempting to resume schedule: {e}")
+
     TrainLoop(
         model=model,
         diffusion=diffusion,

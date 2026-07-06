@@ -20,8 +20,7 @@ if __name__ == '__main__':
     #ADDED top_p to type float from int 
     parser.add_argument('--top_p', type=float, default=-1, help='top p used in sampling, default is off')
     parser.add_argument('--pattern', type=str, default='ema', help='training pattern')
-    parser.add_argument('--time_schedule_path', type=str, default='', help='path to the learned adaptive schedule .npy file')
-    
+    parser.add_argument('--time_schedule_path', type=str, required=True, help='path to the .npy alpha schedule file')    
     args = parser.parse_args()
 
     # set working dir to the upper folder
@@ -40,28 +39,18 @@ if __name__ == '__main__':
             os.mkdir(out_dir)
 
         for checkpoint_one in checkpoints:
+            # Always use the explicitly provided schedule pat
             current_schedule = args.time_schedule_path
-            try:
-                base_name = os.path.basename(checkpoint_one)
-                step_str = base_name.split('_')[-1].split('.')[0]
-                step_num = int(step_str)\
-                
-                potential_npy = os.path.join(lst, f'alpha_cumprod_step_{step_num}.npy')
-                if os.path.exists(potential_npy):
-                    current_schedule = potential_npy
-                    print(f"###Pairing checkpoint {base_name} with schedule {os.path.basename(current_schedule)}")
-            except Exception:
-                pass
+
 
             COMMAND = f'python -m torch.distributed.launch --nproc_per_node=1 --master_port=12{random.randint(0,9)}{random.randint(0,9)}{random.randint(0,9)} --use_env sample_seq2seq.py ' \
             f'--model_path {checkpoint_one} --step {args.step} ' \
             f'--batch_size {args.bsz} --start_n {args.start_n} --seed2 {args.seed} --split {args.split} ' \
             f'--out_dir {out_dir} --top_p {args.top_p} ' \
             f'--rejection_rate {args.rejection_rate} --clamp_step {args.clamp_step} '\
-            f'--note {args.note}'
-            
-            if current_schedule:
-                COMMAND += f' --time_schedule_path {current_schedule}'
+            f'--note {args.note}'\
+            f' --time_schedule_path {current_schedule}'
+
             print(COMMAND)
             
             os.system(COMMAND)
