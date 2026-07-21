@@ -38,6 +38,7 @@ if __name__ == '__main__':
     parser.add_argument('--learning_steps', type=int, default=40000, help='total steps of learning')
     parser.add_argument('--save_interval', type=int, default=10000, help='save step')
     parser.add_argument('--resume_checkpoint', type=str, default='none', help='path to resume checkpoint, like xxx/xxx.pt')
+    parser.add_argument('--time_schedule_path', type=str, default='', help='explicit path to an adaptive noise schedule file, like xxx/alpha_cumprod_step_20000.npy. If given, this is loaded directly instead of being inferred from --resume_checkpoint')
     parser.add_argument('--lr', type=float, default=1e-04, help='learning rate')
     parser.add_argument('--gradient_clipping', type=float,default=-1.0, help='gradient clipping')
     parser.add_argument('--use_fp16', action='store_true', help='use fp16 or not')
@@ -98,6 +99,7 @@ if __name__ == '__main__':
                   f"--diffusion_steps {args.diff_steps} " \
                   f"--noise_schedule {args.noise_schedule} " \
                   f"--schedule_sampler {args.schedule_sampler} --resume_checkpoint {args.resume_checkpoint} " \
+                  f"--time_schedule_path \"{args.time_schedule_path}\" " \
                   f"--seq_len {args.seq_len} --hidden_t_dim {args.hidden_t_dim} --seed {args.seed} " \
                   f"--hidden_dim {args.hidden_dim} " \
                   f"--learning_steps {args.learning_steps} --save_interval {args.save_interval} " \

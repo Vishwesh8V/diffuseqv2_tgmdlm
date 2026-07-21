@@ -45,7 +45,7 @@
   "rejection_rate": 0.0,
   "reg_rate": 0.01,
   "device": "",
-  "token_max_length": 128,
+  "token_max_length": 256,
   "save_dir": "",
   "time_schedule_path": "",
   "loss_update_granu": 20,

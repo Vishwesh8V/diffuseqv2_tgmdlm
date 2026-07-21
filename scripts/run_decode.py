@@ -20,7 +20,8 @@ if __name__ == '__main__':
     #ADDED top_p to type float from int 
     parser.add_argument('--top_p', type=float, default=-1, help='top p used in sampling, default is off')
     parser.add_argument('--pattern', type=str, default='ema', help='training pattern')
-    parser.add_argument('--time_schedule_path', type=str, required=True, help='path to the .npy alpha schedule file')    
+    parser.add_argument('--time_schedule_path', type=str, required=True, help='path to the .npy alpha schedule file')
+    parser.add_argument('--save_trajectories', action='store_true', help='dump per-sentence alpha/beta noise-schedule + token/entropy denoising trajectories (one .npz per test sentence) for diagnostic plotting via plot_alphas.py')
     args = parser.parse_args()
 
     # set working dir to the upper folder
@@ -49,7 +50,8 @@ if __name__ == '__main__':
             f'--out_dir {out_dir} --top_p {args.top_p} ' \
             f'--rejection_rate {args.rejection_rate} --clamp_step {args.clamp_step} '\
             f'--note {args.note}'\
-            f' --time_schedule_path {current_schedule}'
+            f' --time_schedule_path {current_schedule}'\
+            f'{" --save_trajectories True" if args.save_trajectories else ""}'
 
             print(COMMAND)
             

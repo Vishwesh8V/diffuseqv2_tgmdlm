@@ -10,7 +10,7 @@ torchrun \
     --save_interval 10000 \
     --seed 102 \
     --noise_schedule sqrt \
-    --hidden_dim 256 \
+    --hidden_dim 128 \
     --bsz 1024 \
     --microbatch 128 \
     --dataset iwslt14_mol \
@@ -22,10 +22,11 @@ torchrun \
     --scibert_path allenai/scibert_scivocab_uncased \
     --seq_len 256 \
     --schedule_sampler lossaware \
-    --notes seq256_adan_ckpt20k \
+    --notes seq256_adan_ckpt40k \
     --use_fp16 \
     --gradient_clipping 1.0 \
-    --resume_checkpoint diffusion_models/diffuseq_iwslt14_mol_h128_lr0.0001_t2000_sqrt_lossaware_seed102_seq256_adan_04072620260704-02:59:29/ema_0.9999_020000.pt \
+    --resume_checkpoint diffusion_models/diffuseq_iwslt14_mol_h128_lr0.0001_t2000_sqrt_lossaware_seed102_seq256_adan_0807_ckpt20k20260708-10:28:56/ema_0.9999_040000.pt \
+    --time_schedule_path diffusion_models/diffuseq_iwslt14_mol_h128_lr0.0001_t2000_sqrt_lossaware_seed102_seq256_adan_0807_ckpt20k20260708-10:28:56/alpha_cumprod_step_40000.npy \
     --loss_update_granu 50 \
     --schedule_update_stride 10000
 

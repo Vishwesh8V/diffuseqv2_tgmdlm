@@ -97,19 +97,32 @@ def main():
 
     logger.log("### Training...")
 
-    if args.resume_checkpoint != 'none' and args.resume_checkpoint != '':
-        try:
-            from train_util import parse_resume_step_from_filename
-            resume_step = parse_resume_step_from_filename(args.resume_checkpoint)
-            resume_dir = os.path.dirname(args.resume_checkpoint)
-            potential_npy = os.path.join(resume_dir, f'alpha_cumprod_step_{resume_step}.npy')
-            if os.path.exists(potential_npy):
-                logger.log(f"### Resuming adaptive schedule from {potential_npy}")
-                diffusion._load_time_schedule(potential_npy)
-            else:
-                logger.log(f"### Warning: No matching schedule found at {potential_npy}. Starting with default.")
-        except Exception as e:
-            logger.log(f"### Error attempting to resume schedule: {e}")
+    if getattr(args, 'time_schedule_path', '') not in ('', None):
+        # An explicit path to an alpha_cumprod_step##.npy was given on the
+        # command line (--time_schedule_path). This takes priority over the
+        # automatic inference from --resume_checkpoint below.
+        if os.path.exists(args.time_schedule_path):
+            logger.log(f"### Loading adaptive noise schedule explicitly from {args.time_schedule_path}")
+            diffusion._load_time_schedule(args.time_schedule_path)
+        else:
+            logger.log(f"### Warning: --time_schedule_path {args.time_schedule_path} does not exist. "
+                        f"Falling back to automatic schedule inference from --resume_checkpoint.")
+            args.time_schedule_path = ''
+
+    if not getattr(args, 'time_schedule_path', ''):
+        if args.resume_checkpoint != 'none' and args.resume_checkpoint != '':
+            try:
+                from train_util import parse_resume_step_from_filename
+                resume_step = parse_resume_step_from_filename(args.resume_checkpoint)
+                resume_dir = os.path.dirname(args.resume_checkpoint)
+                potential_npy = os.path.join(resume_dir, f'alpha_cumprod_step_{resume_step}.npy')
+                if os.path.exists(potential_npy):
+                    logger.log(f"### Resuming adaptive schedule from {potential_npy}")
+                    diffusion._load_time_schedule(potential_npy)
+                else:
+                    logger.log(f"### Warning: No matching schedule found at {potential_npy}. Starting with default.")
+            except Exception as e:
+                logger.log(f"### Error attempting to resume schedule: {e}")
 
     TrainLoop(
         model=model,
