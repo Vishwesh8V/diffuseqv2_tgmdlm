@@ -11,3 +11,7 @@ ckpts/
 *.pt
 *.npy
 *.log
+trajectory_plots/
+trajectory_plots/*
+*.csv
+*.png

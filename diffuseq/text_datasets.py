@@ -58,7 +58,7 @@ def load_data_text(
             # drop_last=True,
             sampler=sampler,
             # shuffle=not deterministic,
-            num_workers=16,
+            num_workers=8,
             pin_memory=True
         )
     else:
@@ -68,7 +68,7 @@ def load_data_text(
             # drop_last=True,
             # sampler=sampler,
             shuffle=not deterministic,
-            num_workers=16,
+            num_workers=8,
             pin_memory=True
         )
 

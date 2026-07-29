@@ -1191,15 +1191,16 @@ class DPM_Solver:
                 t = timesteps[step]
                 t_prev_list = [t]
 
-                x = self.model_fn(x, t)
-                x = torch.where(input_ids_mask==0, x_start, x)
-
-                model_prev_list = [x]
+                # Evaluate model at the first timestep; keep x_t (the noisy sample) and
+                # model output separate so the solver update receives the right input.
+                # The mask is applied only to x (the running trajectory), not to model outputs.
+                model_prev_list = [self.model_fn(x, t)]
                 if self.correcting_xt_fn is not None:
                     x = self.correcting_xt_fn(x, t, step)
                 if return_intermediate:
                     intermediates.append(x)
-                # Init the first `order` values by lower order multistep DPM-Solver.
+
+                # Init the first `order` values by lower-order multistep DPM-Solver.
                 for step in range(1, order):
                     t = timesteps[step]
                     x = self.multistep_dpm_solver_update(x, model_prev_list, t_prev_list, t, step, solver_type=solver_type)
@@ -1209,10 +1210,9 @@ class DPM_Solver:
                     if return_intermediate:
                         intermediates.append(x)
                     t_prev_list.append(t)
-                    x = self.model_fn(x, t)
-                    x = torch.where(input_ids_mask==0, x_start, x)
-                    model_prev_list.append(x)
-                # Compute the remaining values by `order`-torch order multistep DPM-Solver.
+                    model_prev_list.append(self.model_fn(x, t))
+
+                # Compute the remaining values by `order`-th order multistep DPM-Solver.
                 for step in range(order, steps + 1):
                     t = timesteps[step]
                     # We only use lower order for steps < 10
@@ -1232,9 +1232,7 @@ class DPM_Solver:
                     t_prev_list[-1] = t
                     # We do not need to evaluate the final model value.
                     if step < steps:
-                        x = self.model_fn(x, t)
-                        x = torch.where(input_ids_mask==0, x_start, x)
-                        model_prev_list[-1] = x
+                        model_prev_list[-1] = self.model_fn(x, t)
             elif method in ['singlestep', 'singlestep_fixed']:
                 if method == 'singlestep':
                     timesteps_outer, orders = self.get_orders_and_timesteps_for_singlestep_solver(steps=steps, order=order, skip_type=skip_type, t_T=t_T, t_0=t_0, device=device)
