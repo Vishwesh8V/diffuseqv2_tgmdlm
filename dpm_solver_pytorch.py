@@ -286,8 +286,11 @@ def model_wrapper(
         For continuous-time DPMs, we just use `t_continuous`.
         """
         if noise_schedule.schedule == 'discrete':
-            # return (t_continuous - 1. / noise_schedule.total_N) * 1000.
-            return (t_continuous) * 1000.
+            # t_continuous ∈ [1/N, 1] → discrete index i = t*N - 1 ∈ [0, N-1]
+            # With rescale_timesteps=True, model sees i * (1000/N).
+            # This matches the _WrappedModel / _scale_timesteps convention used
+            # during training: t_input = (t_continuous - 1/N) * 1000.
+            return (t_continuous - 1. / noise_schedule.total_N) * 1000.
         else:
             return t_continuous
 
@@ -448,6 +451,9 @@ class DPM_Solver:
         """
         noise = self.noise_prediction_fn(x, t)
         alpha_t, sigma_t = self.noise_schedule.marginal_alpha(t), self.noise_schedule.marginal_std(t)
+        dims = x.dim()
+        alpha_t = expand_dims(alpha_t, dims)
+        sigma_t = expand_dims(sigma_t, dims)
         x0 = (x - sigma_t * noise) / alpha_t
         if self.correcting_x0_fn is not None:
             x0 = self.correcting_x0_fn(x0)

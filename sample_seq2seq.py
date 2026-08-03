@@ -53,10 +53,57 @@ def main():
     world_size = dist.get_world_size() or 1
     rank = dist.get_rank() or 0
 
+    # Try to infer model_path from time_schedule_path if not provided
+    if not args.model_path and args.time_schedule_path:
+        import glob
+        import re
+        schedule_dir = os.path.dirname(args.time_schedule_path)
+        if schedule_dir:
+            # Look for step number in time_schedule_path, e.g. "step_120000"
+            step_match = re.search(r'step_(\d+)', os.path.basename(args.time_schedule_path))
+            step_suffix = f"_{step_match.group(1)}.pt" if step_match else ".pt"
+            
+            # Find all .pt files in schedule_dir
+            pt_files = glob.glob(os.path.join(schedule_dir, "*.pt"))
+            if pt_files:
+                # Prioritize files matching step_suffix
+                matching_files = [f for f in pt_files if f.endswith(step_suffix)]
+                if matching_files:
+                    args.model_path = matching_files[0]
+                else:
+                    # Fallback: prioritize ema checkpoints
+                    ema_files = [f for f in pt_files if "ema" in os.path.basename(f)]
+                    if ema_files:
+                        args.model_path = ema_files[0]
+                    else:
+                        args.model_path = pt_files[0]
+                logger.log(f"### Inferred model_path from time_schedule_path: {args.model_path}")
+
     # load configurations.
-    config_path = os.path.join(os.path.split(args.model_path)[0], "training_args.json")
-    print(config_path)
-    # sys.setdefaultencoding('utf-8')
+    config_dir = ""
+    if args.model_path:
+        config_dir = os.path.split(args.model_path)[0]
+    elif args.time_schedule_path:
+        config_dir = os.path.split(args.time_schedule_path)[0]
+
+    config_path = os.path.join(config_dir, "training_args.json") if config_dir else "training_args.json"
+    print(f"Loading training configuration from: {config_path}")
+
+    # If the file still doesn't exist, search recursively in the workspace
+    if not os.path.exists(config_path):
+        import glob
+        logger.log(f"### training_args.json not found at {config_path}. Searching recursively...")
+        candidate_paths = glob.glob("**/training_args.json", recursive=True)
+        candidate_paths = [p for p in candidate_paths if "venv" not in p and ".conda" not in p]
+        if candidate_paths:
+            config_path = candidate_paths[0]
+            logger.log(f"### Found training_args.json at: {config_path}")
+        else:
+            raise FileNotFoundError(
+                f"Could not find training_args.json. Checked: {config_path} and recursive search. "
+                "Please make sure it exists in the workspace or specify a valid --model_path."
+            )
+
     # Save inference-time CLI args BEFORE training_args.json overwrites them.
     # args.__dict__.update(training_args) would silently replace --time_schedule_path
     # with the value stored at training time (often empty or a stale path).
@@ -87,9 +134,12 @@ def main():
         logger.log(f"### Loading time schedule from {args.time_schedule_path}...")
         diffusion._load_time_schedule(args.time_schedule_path)
 
-    model.load_state_dict(
-        dist_util.load_state_dict(args.model_path, map_location="cpu")
-    )
+    if args.model_path:
+        model.load_state_dict(
+            dist_util.load_state_dict(args.model_path, map_location="cpu")
+        )
+    else:
+        logger.log("### WARNING: model_path is empty. Skipping loading state dict (model will use random weights).")
 
     pytorch_total_params = sum(p.numel() for p in model.parameters())
     logger.log(f'### The parameter count is {pytorch_total_params}')
@@ -129,14 +179,20 @@ def main():
     # batch, cond = next(data_valid)
     # print(batch.shape)
 
-    model_base_name = os.path.basename(os.path.split(args.model_path)[0]) + f'.{os.path.split(args.model_path)[1]}'
-    out_dir = os.path.join(args.out_dir, f"{model_base_name.split('.ema')[0]}")
-    if not os.path.isdir(out_dir):
-        os.mkdir(out_dir)
+    model_base_name = os.path.basename(os.path.split(args.model_path)[0]) + f'.{os.path.split(args.model_path)[1]}' if args.model_path else "random_weights.ema_0.9999_000000.pt"
+    
+    if '.ema' in model_base_name:
+        model_name_prefix = model_base_name.split('.ema')[0]
+        ema_suffix = model_base_name.split('.ema')[1]
+    else:
+        model_name_prefix = model_base_name
+        ema_suffix = "_no_ema"
 
-    out_path = os.path.join(out_dir, f"ema{model_base_name.split('.ema')[1]}.samples")
-    if not os.path.isdir(out_path):
-        os.mkdir(out_path)
+    out_dir = os.path.join(args.out_dir, f"{model_name_prefix}")
+    os.makedirs(out_dir, exist_ok=True)
+
+    out_path = os.path.join(out_dir, f"ema{ema_suffix}.samples")
+    os.makedirs(out_path, exist_ok=True)
     out_path = os.path.join(out_path, f"seed{args.seed2}_step{args.clamp_step}_{args.note}.json")
     # fout = open(out_path, 'a')
 

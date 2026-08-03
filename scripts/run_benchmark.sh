@@ -17,13 +17,14 @@ set -e  # stop the script if any command fails, instead of silently continuing
 MODEL_DIR="diffusion_models/diffuseq_iwslt14_mol_h128_lr0.0001_t2000_sqrt_lossaware_seed102_seq128_adan_0707_ckpt109k20260707-12:57:50"          # folder containing exactly ONE checkpoint you want timed
 TIME_SCHEDULE_PATH="diffusion_models/diffuseq_iwslt14_mol_h128_lr0.0001_t2000_sqrt_lossaware_seed102_seq128_adan_0707_ckpt109k20260707-12:57:50/alpha_cumprod_step_120000.npy"           # your --time_schedule_path .npy file
 
+
 NUM_REPEATS=5                                        # real (non-warmup) repeats per configuration
 DPM_STEPS="100 10 2"                                 # space-separated list of DPM-Solver step counts to sweep
 NORMAL_STEPS=2000                                    # full-schedule step count for the normal baseline
 
 BSZ=50
 SPLIT="test"
-SEED=101
+SEED=123
 
 TIMING_CSV="benchmark_timing.csv"                    # shared CSV all runs append into
 OUT_PREFIX="benchmark"                               # prefix for _summary.csv / _bar.png / _line.png
@@ -43,7 +44,7 @@ fi
 
 echo "### Running benchmark sweep..."
 python run_benchmark.py \
-    --model_dir "$MODEL_DIR" \
+    --model_path "$MODEL_PATH" \
     --time_schedule_path "$TIME_SCHEDULE_PATH" \
     --num_repeats "$NUM_REPEATS" \
     --dpm_steps $DPM_STEPS \
@@ -52,6 +53,8 @@ python run_benchmark.py \
     --split "$SPLIT" \
     --seed "$SEED" \
     --timing_csv "$TIMING_CSV" \
+    --top_p 0.9 \
+    --rejection_rate 0.1 \
     $EXTRA_FLAGS
 
 echo ""

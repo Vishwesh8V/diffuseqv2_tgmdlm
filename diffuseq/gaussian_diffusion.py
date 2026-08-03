@@ -226,6 +226,7 @@ class GaussianDiffusion:
             else:
                 alphas[i]  = self.alphas_cumprod[i]/ self.alphas_cumprod[i-1]
         betas = 1.0-alphas
+        self.betas = betas  # persist so DPM-Solver reads the adaptive schedule
 
         if self.token_max_length is not None:
             self.alphas_cumprod_prev = np.vstack((np.ones((1,self.token_max_length)), self.alphas_cumprod[:-1]))

@@ -57,8 +57,18 @@ if __name__ == '__main__':
         os.mkdir(out_dir)
 
     for checkpoint_one in checkpoint_list:
-        # Always use the explicitly provided schedule pat
-        current_schedule = args.time_schedule_path
+        # Dynamically resolve correct schedule file matching the checkpoint step if available
+        from train_util import parse_resume_step_from_filename
+        checkpoint_dir = os.path.dirname(checkpoint_one)
+        checkpoint_step = parse_resume_step_from_filename(checkpoint_one)
+        potential_schedule = os.path.join(checkpoint_dir, f"alpha_cumprod_step_{checkpoint_step}.npy")
+        
+        if os.path.exists(potential_schedule):
+            current_schedule = potential_schedule
+            print(f"### Dynamically resolved schedule path to: {current_schedule}")
+        else:
+            current_schedule = args.time_schedule_path
+            print(f"### Mismatch or schedule not found, falling back to default: {current_schedule}")
 
         COMMAND = f'python -m torch.distributed.launch --nproc_per_node=1 --master_port=12{random.randint(0,9)}{random.randint(0,9)}{random.randint(0,9)} --use_env sample_seq2seq.py ' \
         f'--model_path {checkpoint_one} --step {args.step} ' \
