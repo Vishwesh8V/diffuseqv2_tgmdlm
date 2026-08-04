@@ -35,7 +35,7 @@ def run(cmd):
 
 def main():
     p = argparse.ArgumentParser()
-    p.add_argument('--model_path', type=str, required=True,
+    p.add_argument('--model_dir', type=str, required=True,
                     help='Path to the single .pt checkpoint file you want to benchmark.')
     p.add_argument('--time_schedule_path', type=str, required=True,
                     help='Path to the .npy noise schedule file matching the checkpoint.')
@@ -75,7 +75,7 @@ def main():
                 f"python -m torch.distributed.launch --nproc_per_node=1 "
                 f"--master_port={port} --use_env "
                 f"sample_seq2seq.py "
-                f"--model_path '{args.model_path}' "
+                f"--model_dir '{args.model_dir}' "
                 f"--step {args.normal_steps} "
                 f"--batch_size {args.bsz} "
                 f"--seed2 {args.seed} "
@@ -99,7 +99,7 @@ def main():
                     f"python -m torch.distributed.launch --nproc_per_node=1 "
                     f"--master_port={port} --use_env "
                     f"sample_seq2seq_dpmSolver.py "
-                    f"--model_path '{args.model_path}' "
+                    f"--model_dir '{args.model_dir}' "
                     f"--step {steps} "
                     f"--batch_size {args.bsz} "
                     f"--seed2 {args.seed} "

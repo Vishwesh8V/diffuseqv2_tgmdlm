@@ -138,8 +138,8 @@ if __name__ == "__main__":
     # calculate_bleu_from_jsonl('../generation_outputs/diffuseq_iwslt14_mol_h128_lr0.0001_t2000_sqrt_lossaware_seed102_seq256_adan_ckpt40k20260720-15:32:52/ema_0.9999_070000.pt.samples/seed123_step0_adanoise_40_70k_50knpy.json')
 
     # 0.5781 - 189k ckpt with 110.npy
-    calculate_bleu_from_jsonl('../generation_outputs/diffuseq_iwslt14_mol_h128_lr0.0001_t2000_sqrt_lossaware_seed102_seq128_adan_0707_ckpt109k20260707-12:57:50/ema_0.9999_200000.pt.samples/seed123_solverstep2_bench_dpm2_r1.json')
-    calculate_bleu_from_jsonl('../generation_outputs/diffuseq_iwslt14_mol_h128_lr0.0001_t2000_sqrt_lossaware_seed102_seq128_adan_0707_ckpt109k20260707-12:57:50/ema_0.9999_200000.pt.samples/seed123_solverstep10_bench_dpm10_r1.json')
-    calculate_bleu_from_jsonl('../generation_outputs/diffuseq_iwslt14_mol_h128_lr0.0001_t2000_sqrt_lossaware_seed102_seq128_adan_0707_ckpt109k20260707-12:57:50/ema_0.9999_200000.pt.samples/seed123_solverstep100_bench_dpm100_r1.json')
-    calculate_bleu_from_jsonl('../generation_outputs/diffuseq_iwslt14_mol_h128_lr0.0001_t2000_sqrt_lossaware_seed102_seq128_adan_0707_ckpt109k20260707-12:57:50/ema_0.9999_200000.pt.samples/seed123_step0_bench_normal_r1.json')
+    calculate_bleu_from_jsonl('../generation_outputs/diffuseq_iwslt14_mol_h128_lr0.0001_t2000_sqrt_lossaware_seed102_seq128_adan_0707_ckpt109k20260707-12:57:50/ema_0.9999_200000.pt.samples/seed123_solverstep2_bench_dpm2_r0.json')
+    calculate_bleu_from_jsonl('../generation_outputs/diffuseq_iwslt14_mol_h128_lr0.0001_t2000_sqrt_lossaware_seed102_seq128_adan_0707_ckpt109k20260707-12:57:50/ema_0.9999_200000.pt.samples/seed123_solverstep10_bench_dpm10_r0.json')
+    calculate_bleu_from_jsonl('../generation_outputs/diffuseq_iwslt14_mol_h128_lr0.0001_t2000_sqrt_lossaware_seed102_seq128_adan_0707_ckpt109k20260707-12:57:50/ema_0.9999_200000.pt.samples/seed123_solverstep100_bench_dpm100_r0.json')
+    calculate_bleu_from_jsonl('../generation_outputs/diffuseq_iwslt14_mol_h128_lr0.0001_t2000_sqrt_lossaware_seed102_seq128_adan_0707_ckpt109k20260707-12:57:50/ema_0.9999_200000.pt.samples/seed123_step0_bench_normal_r0.json')
     calculate_bleu_from_jsonl('../generation_outputs/diffuseq_iwslt14_mol_h128_lr0.0001_t2000_sqrt_lossaware_seed102_seq128_adan_0707_ckpt109k20260707-12:57:50/ema_0.9999_200000.pt.samples/seed123_step0_adanoise_110_200k_120knpy.json')
