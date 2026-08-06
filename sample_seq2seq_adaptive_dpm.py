@@ -33,7 +33,23 @@ from timing_utils import append_timing_row  # BENCHMARK: shared CSV row logger
 def create_argparser():
     defaults = dict(model_path='', step=0, out_dir='', top_p=0.0, rejection_rate=0.0, note='none', time_schedule_path='', save_trajectories=False,
                      timing_csv='benchmark_timing.csv', repeat_idx=0,
-                     K=20, J_path='', profile_batches=10, smooth_sigma=5.0, T_subset=0, solver_order=2)  # BENCHMARK: new CLI args
+                     # --- adaptive DPM schedule args ---
+                     K=20,                          # solver steps at inference
+                     J_dense_path='J_adaptive_dense.npy',  # canonical (T,L) precompute artefact
+                     # profiling
+                     profile_batches=10,
+                     T_subset=0,
+                     reuse_noise=True,              # reuse noise across timesteps (reduces variance)
+                     # curve fitting
+                     smooth_method='isotonic_pchip',  # isotonic_pchip | savgol | pchip_raw
+                     dense_grid_size=4096,
+                     monitor_floor=1e-8,
+                     # solver
+                     solver_order=2,
+                     # optional: save calibration npz for inspection
+                     calibration_dir='',
+                     # legacy (unused, kept for backward compat with old scripts)
+                     J_path='', smooth_sigma=5.0)
     decode_defaults = dict(split='valid', clamp_step=0, seed2=105, clip_denoised=False, start_n=0)
     defaults.update(load_defaults_config())
     defaults.update(decode_defaults)
@@ -234,13 +250,21 @@ def main():
     print('Start from ...', args.start_n)
     all_test_data = all_test_data[args.start_n:]
 
-    from dpm_solver_token_adaptive import TokenAdaptiveDPM_Solver, build_token_timestep_matrix, token_model_wrapper
+    from dpm_solver_token_adaptive import (
+        TokenAdaptiveDPM_Solver, build_token_timestep_matrix,
+        subsample_J, token_model_wrapper
+    )
 
-    if args.J_path and os.path.exists(args.J_path):
-        J = np.load(args.J_path)
-        print(f"Loaded J from {args.J_path}")
+    # ------------------------------------------------------------------
+    # Load or build the DENSE (T, L) J matrix (precomputed once for all K)
+    # ------------------------------------------------------------------
+    dense_path = args.J_dense_path  # canonical artefact path
+
+    if dense_path and os.path.exists(dense_path):
+        J_dense = np.load(dense_path)  # (T, L)
+        print(f"Loaded dense J from {dense_path}  shape={J_dense.shape}")
     else:
-        print("Profiling to build J matrix...")
+        print("Profiling to build dense J matrix (T, L) -- this is done once for all K...")
         data_profiler = load_data_text(
             batch_size=args.batch_size,
             seq_len=args.seq_len,
@@ -251,17 +275,28 @@ def main():
             model_emb=model_emb.cpu(),
             loop=False
         )
-        J = build_token_timestep_matrix(
+        J_dense = build_token_timestep_matrix(
             model=model, diffusion=diffusion,
             data_loader=data_profiler,
-            K=args.K, device=dist_util.dev(),
+            device=dist_util.dev(),
             T_subset=args.T_subset or None,
-            smooth_sigma=args.smooth_sigma,
             profile_batches=args.profile_batches,
+            reuse_noise=args.reuse_noise,
+            smooth_method=args.smooth_method,
+            dense_grid_size=args.dense_grid_size,
+            monitor_floor=args.monitor_floor,
+            output_dir=args.calibration_dir or None,
         )
-        save_path = args.J_path or "J_adaptive.npy"
-        np.save(save_path, J)
-        print(f"Saved J to {save_path}")
+        save_dense_path = dense_path or "J_adaptive_dense.npy"
+        np.save(save_dense_path, J_dense)
+        print(f"Saved dense J to {save_dense_path}  shape={J_dense.shape}")
+
+    # ------------------------------------------------------------------
+    # Sub-sample K rows on the fly -- no model calls needed
+    # ------------------------------------------------------------------
+    K = args.K
+    J = subsample_J(J_dense, K)  # (K, L)
+    print(f"Sub-sampled J to K={K} steps  shape={J.shape}")
 
     J_tensor = th.from_numpy(J).long().to(dist_util.dev())
 
