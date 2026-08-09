@@ -372,15 +372,18 @@ def build_token_timestep_matrix(
     print(f"[build_token_timestep_matrix] Profiling {profile_batches} batches "
           f"over {len(t_range)} timesteps ...")
 
-    for batch_idx, (z0, cond) in enumerate(data_loader):
+    for batch_idx, (input_ids_batch, cond) in enumerate(data_loader):
         if batch_idx >= profile_batches:
             break
 
-        z0 = z0.to(device)                                    # (B, L, d)
+        # data_loader yields (token_ids, cond) where token_ids is (B, L).
+        # Convert to clean embeddings (B, L, d) exactly as the sampling loop does.
+        input_ids_batch = input_ids_batch.to(device)          # (B, L)
+        z0 = model.get_embeds(input_ids_batch)                # (B, L, d)
         B  = z0.shape[0]
 
-        input_ids_mask    = cond['input_mask']                 # (B, L) int/float
-        input_ids_mask_3d = input_ids_mask.unsqueeze(-1).expand_as(z0).to(device)
+        input_ids_mask    = cond['input_mask']                 # (B, L)
+        input_ids_mask_3d = input_ids_mask.unsqueeze(-1).expand_as(z0).to(device)  # (B, L, d)
         mask_gpu          = input_ids_mask.float().to(device)  # (B, L)
 
         # One noise draw per batch, reused across all T steps if requested
@@ -392,10 +395,28 @@ def build_token_timestep_matrix(
 
             eps = common_noise if (common_noise is not None) else torch.randn_like(z0)
 
-            z_t = diffusion.q_sample(z0, t_tensor)            # (B, L, d)
-            z_t = torch.where(input_ids_mask_3d == 0, z0, z_t)  # keep source tokens clean
+            # Pass mean_embed so q_sample's self.denoise branch works correctly
+            # (mirrors gaussian_diffusion.py line 800 in the training loop).
+            # Also pass the mask so q_sample anchors source tokens itself.
+            mean_emb = getattr(model, 'mean_embed', None)
+            z_t = diffusion.q_sample(
+                z0, t_tensor,
+                noise=eps,
+                mask=input_ids_mask.to(device),
+                mean_embed=mean_emb,
+            )                                                  # (B, L, d)
+            # Belt-and-suspenders: ensure source tokens are clean even if mask path differs
+            z_t = torch.where(input_ids_mask_3d == 0, z0, z_t)
 
-            pred_x0   = model(z_t, t_tensor_2d)               # (B, L, d)
+            # Apply the same rescaling as _scale_timesteps(t) in gaussian_diffusion.py.
+            # During training the model always receives a scaled 1D (B,) timestep.
+            if hasattr(diffusion, 'rescale_timesteps') and diffusion.rescale_timesteps:
+                t_for_model = t_tensor.float() * (1000.0 / diffusion.num_timesteps)
+            else:
+                t_for_model = t_tensor  # shape (B,)
+
+            pred_x0   = model(z_t, t_for_model)               # (B, L, d)
+
             per_token = ((pred_x0 - z0) ** 2).mean(-1)        # (B, L)
             per_token = per_token * mask_gpu                   # zero source positions
 
@@ -480,10 +501,13 @@ def build_token_timestep_matrix(
 
         J_dense[:, i] = idx
 
-    # Enforce descending-t order: row 0 = noisiest (highest t), row T-1 = cleanest
-    # After repair_monotone, columns are in ascending lambda order;
-    # since lambda increases as t decreases, we flip to get descending t.
-    J_dense = J_dense[::-1, :].copy()                         # (T, L)
+    # J_dense ordering: row 0 = noisiest (highest t_idx, lowest lambda),
+    #                   row T-1 = cleanest (lowest t_idx, highest lambda).
+    # After repair_monotone, lam_star_i quantiles run low-to-high lambda
+    # (q=0 → noisiest, q=1 → cleanest), so idx[0] ~ T-1 (noisiest) and
+    # idx[-1] ~ 0 (cleanest). This is already the correct descending-t order;
+    # no flip is needed (the old [::-1] here was incorrect and inverted it).
+    J_dense = J_dense.copy()                                   # (T, L)
 
     # ---- Optional: persist calibration artefacts ----------------------------
     if output_dir is not None:
@@ -552,17 +576,37 @@ def subsample_J(J_dense, K):
 # Model wrapper
 # ===========================================================================
 
-def token_model_wrapper(model, alphas_cumprod_2d, model_kwargs={}):
+def token_model_wrapper(model, alphas_cumprod_2d, diffusion=None, model_kwargs={}):
     """
     Returns: model_fn(x: BxLxd, t_ids: L long or BxL long) -> pred_x0: BxLxd
-    Uses the per-token t_ids as the 2D timestep for the transformer (Option B).
+
+    IMPORTANT: The underlying transformer was trained with a single scalar
+    timestep per batch element (shape (B,)).  Passing a 2D per-token tensor
+    produces out-of-distribution sinusoidal embeddings that destroy output
+    quality.  We therefore reduce the per-token J[r] row to one representative
+    global timestep per batch element (median across non-source positions).
+
+    The per-token schedule information is still used correctly in the DPM-Solver
+    update math (alpha/sigma lookups in _token_schedule_coeffs); only the model
+    *conditioning* needs to match the training distribution.
     """
     def model_fn(x, t_ids):
-        # Expand t_ids to (B, L) if it is (L,)
+        # t_ids: (L,) per-token timestep row from J, or (B, L) already batched.
+        # Reduce to (B,) global timestep by taking the median across L.
         if t_ids.dim() == 1:
-            t_batch = t_ids.unsqueeze(0).expand(x.shape[0], -1)  # (B, L)
+            # (L,) → scalar → expand to (B,)
+            t_global = t_ids.float().median().long()
+            t_1d = t_global.unsqueeze(0).expand(x.shape[0])          # (B,)
         else:
-            t_batch = t_ids
-        pred_x0 = model(x, t_batch, **model_kwargs)
+            # (B, L) → (B,) via median across token dim
+            t_1d = t_ids.float().median(dim=-1).values.long()         # (B,)
+
+        # Apply the same rescaling as _scale_timesteps in gaussian_diffusion.py
+        if diffusion is not None and diffusion.rescale_timesteps:
+            t_scaled = t_1d.float() * (1000.0 / diffusion.num_timesteps)
+        else:
+            t_scaled = t_1d
+
+        pred_x0 = model(x, t_scaled, **model_kwargs)
         return pred_x0
     return model_fn

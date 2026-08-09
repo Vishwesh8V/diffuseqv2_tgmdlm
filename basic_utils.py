@@ -169,7 +169,7 @@ def load_model_emb(args, tokenizer):
     model = torch.nn.Embedding(tokenizer.vocab_size, args.hidden_dim)
     path_save = '{}/random_emb.torch'.format(args.checkpoint_path)
     path_save_ind = path_save + ".done"
-    if int(os.environ['LOCAL_RANK']) == 0:
+    if int(os.environ.get('LOCAL_RANK', '0')) == 0:
         if os.path.exists(path_save):
             print('reload the random embeddings', model)
             model.load_state_dict(torch.load(path_save))

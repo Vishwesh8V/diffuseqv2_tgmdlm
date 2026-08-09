@@ -70,8 +70,12 @@ def main():
     dist_util.setup_dist()
     logger.configure()
     
-    world_size = dist.get_world_size() or 1
-    rank = dist.get_rank() or 0
+    try:
+        world_size = dist.get_world_size()
+        rank = dist.get_rank()
+    except Exception:
+        world_size = 1
+        rank = 0
 
     # Try to infer model_path from time_schedule_path if not provided
     if not args.model_path and args.time_schedule_path:
@@ -291,6 +295,10 @@ def main():
         np.save(save_dense_path, J_dense)
         print(f"Saved dense J to {save_dense_path}  shape={J_dense.shape}")
 
+    # load_data_text was called with model_emb.cpu() which mutates the module
+    # in-place. Restore it to the correct device before the solver uses it.
+    model_emb = model_emb.to(dist_util.dev())
+
     # ------------------------------------------------------------------
     # Sub-sample K rows on the fly -- no model calls needed
     # ------------------------------------------------------------------
@@ -305,7 +313,7 @@ def main():
     pred_xstart_traj = []
 
     alphas_cumprod_t = th.from_numpy(diffusion.alphas_cumprod).float().to(dist_util.dev())
-    model_fn = token_model_wrapper(model, alphas_cumprod_t, model_kwargs={})
+    model_fn = token_model_wrapper(model, alphas_cumprod_t, diffusion=diffusion, model_kwargs={})
 
     def rounding_corrector(x0, t=None):
         rounded_x0, _ = denoised_fn_round(args, model_emb, x0, t)
@@ -319,6 +327,8 @@ def main():
     )
 
     def sample_x_at_J0(x_start, t_ids_row0, diffusion, noise, device):
+        # NOTE: No longer used for initialization — kept for reference / diagnostics.
+        # We now initialize from pure noise to match the training distribution.
         ac = th.from_numpy(diffusion.alphas_cumprod).float().to(device)
         L = x_start.shape[1]
         ac_t = ac[t_ids_row0, th.arange(L, device=device)]
@@ -333,8 +343,9 @@ def main():
     for cond in tqdm(all_test_data):
 
         if not cond:  # Barrier for Remainder
+            local_rank = int(os.environ.get("LOCAL_RANK", 0))
             for i in range(world_size):
-                dist.barrier(device_ids=[int(os.environ["LOCAL_RANK"])])
+                dist.barrier(device_ids=[local_rank])
             continue
                 
         input_ids_x = cond.pop('input_ids').to(dist_util.dev())
@@ -344,8 +355,11 @@ def main():
 
         noise = th.randn_like(x_start)
         input_ids_mask = th.broadcast_to(input_ids_mask.unsqueeze(dim=-1), x_start.shape).to(dist_util.dev())
-        x_noised = sample_x_at_J0(x_start, J_tensor[0], diffusion, noise, dist_util.dev())
-        x_noised = th.where(input_ids_mask==0, x_start, x_noised)
+        # Initialize target tokens from pure noise (t=T), exactly as the baseline dpmSolver does.
+        # J[0] controls the noisiest solver *step*, not the starting noise level.
+        # Starting from an intermediate J[0] noise level produces a train/inference mismatch
+        # (the model was trained expecting fully noisy inputs at the start of denoising).
+        x_noised = th.where(input_ids_mask==0, x_start, noise)
         
         # Clear trajectories for the current batch
         samples_traj.clear()
@@ -394,7 +408,7 @@ def main():
 
 
         arr = np.concatenate(all_sentence, axis=0)
-        x_t = th.tensor(arr).cuda()
+        x_t = th.tensor(arr).to(dist_util.dev())
         # print('decoding for seq2seq', )
         # print(arr.shape)
 
@@ -417,10 +431,11 @@ def main():
             word_lst_source.append(tokenizer.decode_token(seq[:len_x]))
             word_lst_ref.append(tokenizer.decode_token(seq[len_x:]))
 
-        fout = open(out_path, 'a')
-        for (recov, ref, src) in zip(word_lst_recover, word_lst_ref, word_lst_source):
-            print(json.dumps({"recover": recov, "reference": ref, "source": src}), file=fout)
-        fout.close()
+        if rank == 0:
+            fout = open(out_path, 'a')
+            for (recov, ref, src) in zip(word_lst_recover, word_lst_ref, word_lst_source):
+                print(json.dumps({"recover": recov, "reference": ref, "source": src}), file=fout)
+            fout.close()
 
         # ADDED 24/06/2026: NEW CHANGE TO GET HEATMAP/trajectories of alpha values for each token in input sequence
         # samples/pred_xstart_list are lists of length num_steps, each element shape (bsz, seq_len, hidden_dim).
