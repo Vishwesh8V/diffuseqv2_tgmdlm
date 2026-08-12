@@ -15,3 +15,5 @@ trajectory_plots/
 trajectory_plots/*
 *.csv
 *.png
+*.pdf
+*.npz
