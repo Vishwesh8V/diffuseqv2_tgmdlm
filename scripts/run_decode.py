@@ -7,9 +7,7 @@ sys.path.append('..')
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='decoding args.')
-    parser.add_argument('--model_dir', type=str, default='', help='path to the folder of diffusion model (ignored if --checkpoint is given)')
-    parser.add_argument('--checkpoint', type=str, default='', help='path to ONE specific checkpoint .pt file to test. If set, this overrides '
-                         '--model_dir/--pattern entirely -- only this exact checkpoint runs, instead of every checkpoint matching the glob.')
+    parser.add_argument('--model_dir', type=str, default='', help='path to the folder of diffusion model')
     parser.add_argument('--seed', type=int, default=101, help='random seed')
     parser.add_argument('--step', type=int, default=2000, help='if less than diffusion training steps, like 1000, use ddim sampling')
     parser.add_argument('--clamp_step', type=int, default=0, help='clamp start step')
@@ -24,16 +22,7 @@ if __name__ == '__main__':
     parser.add_argument('--pattern', type=str, default='ema', help='training pattern')
     parser.add_argument('--time_schedule_path', type=str, required=True, help='path to the .npy alpha schedule file')
     parser.add_argument('--save_trajectories', action='store_true', help='dump per-sentence alpha/beta noise-schedule + token/entropy denoising trajectories (one .npz per test sentence) for diagnostic plotting via plot_alphas.py')
-    # BENCHMARK: new flags forwarded through to sample_seq2seq.py for the DPM-vs-normal speed benchmark
-    parser.add_argument('--timing_csv', type=str, default='benchmark_timing.csv', help='path to append per-run timing rows for the benchmark')
-    parser.add_argument('--repeat_idx', type=int, default=0, help='repeat index for this run (0 = warmup, excluded from analysis)')
     args = parser.parse_args()
-
-    # Resolve --checkpoint to an absolute path BEFORE the chdir below -- os.path.abspath()
-    # depends on the cwd at the moment it's called, and a relative --checkpoint path is
-    # meant relative to wherever you invoked this script from, not the repo root we're
-    # about to chdir into.
-    checkpoint_abs = os.path.abspath(args.checkpoint) if args.checkpoint else ''
 
     # set working dir to the upper folder
     abspath = os.path.abspath(sys.argv[0])
@@ -41,47 +30,31 @@ if __name__ == '__main__':
     dname = os.path.dirname(dname)
     os.chdir(dname)
 
-    if checkpoint_abs:
-        # test exactly one checkpoint, no globbing at all
-        checkpoint_list = [checkpoint_abs]
-    else:
-        checkpoint_list = []
-        for lst in glob.glob(args.model_dir):
-            print(lst)
-            checkpoint_list.extend(sorted(glob.glob(f"{lst}/{args.pattern}*pt"))[::-1])
-        if not checkpoint_list:
-            print(f"### WARNING: no checkpoints matched --model_dir '{args.model_dir}' --pattern '{args.pattern}'")
+    output_lst = []
+    for lst in glob.glob(args.model_dir):
+        print(lst)
+        checkpoints = sorted(glob.glob(f"{lst}/{args.pattern}*pt"))[::-1]
 
-    out_dir = 'generation_outputs'
-    if not os.path.isdir(out_dir):
-        os.mkdir(out_dir)
+        out_dir = 'generation_outputs'
+        if not os.path.isdir(out_dir):
+            os.mkdir(out_dir)
 
-    for checkpoint_one in checkpoint_list:
-        # Dynamically resolve correct schedule file matching the checkpoint step if available
-        from train_util import parse_resume_step_from_filename
-        checkpoint_dir = os.path.dirname(checkpoint_one)
-        checkpoint_step = parse_resume_step_from_filename(checkpoint_one)
-        potential_schedule = os.path.join(checkpoint_dir, f"alpha_cumprod_step_{checkpoint_step}.npy")
-        
-        if os.path.exists(potential_schedule):
-            current_schedule = potential_schedule
-            print(f"### Dynamically resolved schedule path to: {current_schedule}")
-        else:
+        for checkpoint_one in checkpoints:
+            # Always use the explicitly provided schedule pat
             current_schedule = args.time_schedule_path
-            print(f"### Mismatch or schedule not found, falling back to default: {current_schedule}")
 
-        COMMAND = f'python -m torch.distributed.launch --nproc_per_node=1 --master_port=12{random.randint(0,9)}{random.randint(0,9)}{random.randint(0,9)} --use_env sample_seq2seq.py ' \
-        f'--model_path {checkpoint_one} --step {args.step} ' \
-        f'--batch_size {args.bsz} --start_n {args.start_n} --seed2 {args.seed} --split {args.split} ' \
-        f'--out_dir {out_dir} --top_p {args.top_p} ' \
-        f'--rejection_rate {args.rejection_rate} --clamp_step {args.clamp_step} '\
-        f'--note {args.note}'\
-        f' --time_schedule_path {current_schedule}'\
-        f' --timing_csv {args.timing_csv} --repeat_idx {args.repeat_idx}'\
-        f'{" --save_trajectories True" if args.save_trajectories else ""}'
 
-        print(COMMAND)
+            COMMAND = f'python -m torch.distributed.launch --nproc_per_node=1 --master_port=12{random.randint(0,9)}{random.randint(0,9)}{random.randint(0,9)} --use_env sample_seq2seq.py ' \
+            f'--model_path {checkpoint_one} --step {args.step} ' \
+            f'--batch_size {args.bsz} --start_n {args.start_n} --seed2 {args.seed} --split {args.split} ' \
+            f'--out_dir {out_dir} --top_p {args.top_p} ' \
+            f'--rejection_rate {args.rejection_rate} --clamp_step {args.clamp_step} '\
+            f'--note {args.note}'\
+            f' --time_schedule_path {current_schedule}'\
+            f'{" --save_trajectories True" if args.save_trajectories else ""}'
 
-        os.system(COMMAND)
-
+            print(COMMAND)
+            
+            os.system(COMMAND)
+    
     print('#'*30, 'decoding finished...')

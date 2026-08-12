@@ -27,12 +27,10 @@ from basic_utils import (
     load_model_emb,
     load_tokenizer
 )
-from timing_utils import append_timing_row  # BENCHMARK: shared CSV row logger
 
 def create_argparser():
     #ADDED top_p from 0 to 0.0
-    defaults = dict(model_path='', step=0, out_dir='', top_p=0.0, rejection_rate=0.0, note='none', time_schedule_path='', save_trajectories=False,
-                     timing_csv='benchmark_timing.csv', repeat_idx=0)  # BENCHMARK: new CLI args
+    defaults = dict(model_path='', step=0, out_dir='', top_p=0.0, rejection_rate=0.0, note='none', time_schedule_path='', save_trajectories=False)
     decode_defaults = dict(split='valid', clamp_step=0, seed2=105, clip_denoised=False, start_n=0)
     defaults.update(load_defaults_config())
     defaults.update(decode_defaults)
@@ -53,64 +51,15 @@ def main():
     world_size = dist.get_world_size() or 1
     rank = dist.get_rank() or 0
 
-    # Try to infer model_path from time_schedule_path if not provided
-    if not args.model_path and args.time_schedule_path:
-        import glob
-        import re
-        schedule_dir = os.path.dirname(args.time_schedule_path)
-        if schedule_dir:
-            # Look for step number in time_schedule_path, e.g. "step_120000"
-            step_match = re.search(r'step_(\d+)', os.path.basename(args.time_schedule_path))
-            step_suffix = f"_{step_match.group(1)}.pt" if step_match else ".pt"
-            
-            # Find all .pt files in schedule_dir
-            pt_files = glob.glob(os.path.join(schedule_dir, "*.pt"))
-            if pt_files:
-                # Prioritize files matching step_suffix
-                matching_files = [f for f in pt_files if f.endswith(step_suffix)]
-                if matching_files:
-                    args.model_path = matching_files[0]
-                else:
-                    # Fallback: prioritize ema checkpoints
-                    ema_files = [f for f in pt_files if "ema" in os.path.basename(f)]
-                    if ema_files:
-                        args.model_path = ema_files[0]
-                    else:
-                        args.model_path = pt_files[0]
-                logger.log(f"### Inferred model_path from time_schedule_path: {args.model_path}")
-
     # load configurations.
-    config_dir = ""
-    if args.model_path:
-        config_dir = os.path.split(args.model_path)[0]
-    elif args.time_schedule_path:
-        config_dir = os.path.split(args.time_schedule_path)[0]
-
-    config_path = os.path.join(config_dir, "training_args.json") if config_dir else "training_args.json"
-    print(f"Loading training configuration from: {config_path}")
-
-    # If the file still doesn't exist, search recursively in the workspace
-    if not os.path.exists(config_path):
-        import glob
-        logger.log(f"### training_args.json not found at {config_path}. Searching recursively...")
-        candidate_paths = glob.glob("**/training_args.json", recursive=True)
-        candidate_paths = [p for p in candidate_paths if "venv" not in p and ".conda" not in p]
-        if candidate_paths:
-            config_path = candidate_paths[0]
-            logger.log(f"### Found training_args.json at: {config_path}")
-        else:
-            raise FileNotFoundError(
-                f"Could not find training_args.json. Checked: {config_path} and recursive search. "
-                "Please make sure it exists in the workspace or specify a valid --model_path."
-            )
-
+    config_path = os.path.join(os.path.split(args.model_path)[0], "training_args.json")
+    print(config_path)
+    # sys.setdefaultencoding('utf-8')
     # Save inference-time CLI args BEFORE training_args.json overwrites them.
     # args.__dict__.update(training_args) would silently replace --time_schedule_path
     # with the value stored at training time (often empty or a stale path).
     _cli_time_schedule_path = args.time_schedule_path
     _cli_save_trajectories = args.save_trajectories
-    _cli_timing_csv = args.timing_csv          # BENCHMARK
-    _cli_repeat_idx = args.repeat_idx          # BENCHMARK
 
     with open(config_path, 'rb', ) as f:
         training_args = json.load(f)
@@ -121,8 +70,6 @@ def main():
     if _cli_time_schedule_path:
         args.time_schedule_path = _cli_time_schedule_path
     args.save_trajectories = _cli_save_trajectories
-    args.timing_csv = _cli_timing_csv          # BENCHMARK
-    args.repeat_idx = _cli_repeat_idx          # BENCHMARK
     args.device = f"cuda:{CUDA_VISIBLE_DEVICES}"
 
     logger.log("### Creating model and diffusion...")
@@ -134,12 +81,10 @@ def main():
         logger.log(f"### Loading time schedule from {args.time_schedule_path}...")
         diffusion._load_time_schedule(args.time_schedule_path)
 
-    if args.model_path:
-        model.load_state_dict(
-            dist_util.load_state_dict(args.model_path, map_location="cpu")
-        )
-    else:
-        logger.log("### WARNING: model_path is empty. Skipping loading state dict (model will use random weights).")
+    model.load_state_dict(
+        # dist_util.load_state_dict(args.model_path, False, "model", map_location="cpu")
+        dist_util.load_state_dict(args.model_path, map_location="cpu")
+    )
 
     pytorch_total_params = sum(p.numel() for p in model.parameters())
     logger.log(f'### The parameter count is {pytorch_total_params}')
@@ -179,20 +124,14 @@ def main():
     # batch, cond = next(data_valid)
     # print(batch.shape)
 
-    model_base_name = os.path.basename(os.path.split(args.model_path)[0]) + f'.{os.path.split(args.model_path)[1]}' if args.model_path else "random_weights.ema_0.9999_000000.pt"
-    
-    if '.ema' in model_base_name:
-        model_name_prefix = model_base_name.split('.ema')[0]
-        ema_suffix = model_base_name.split('.ema')[1]
-    else:
-        model_name_prefix = model_base_name
-        ema_suffix = "_no_ema"
+    model_base_name = os.path.basename(os.path.split(args.model_path)[0]) + f'.{os.path.split(args.model_path)[1]}'
+    out_dir = os.path.join(args.out_dir, f"{model_base_name.split('.ema')[0]}")
+    if not os.path.isdir(out_dir):
+        os.mkdir(out_dir)
 
-    out_dir = os.path.join(args.out_dir, f"{model_name_prefix}")
-    os.makedirs(out_dir, exist_ok=True)
-
-    out_path = os.path.join(out_dir, f"ema{ema_suffix}.samples")
-    os.makedirs(out_path, exist_ok=True)
+    out_path = os.path.join(out_dir, f"ema{model_base_name.split('.ema')[1]}.samples")
+    if not os.path.isdir(out_path):
+        os.mkdir(out_path)
     out_path = os.path.join(out_path, f"seed{args.seed2}_step{args.clamp_step}_{args.note}.json")
     # fout = open(out_path, 'a')
 
@@ -225,7 +164,6 @@ def main():
         iterator = iter(all_test_data)
 
     sentence_counter = 0  # running count of real (non-dummy) sentences processed, for diagnostic filenames
-    batch_counter = 0     # BENCHMARK: running count of real batches, for timing rows
 
     for cond in iterator:
 
@@ -257,13 +195,6 @@ def main():
         )
 
         sample_shape = (x_start.shape[0], args.seq_len, args.hidden_dim)
-
-        # BENCHMARK: time only the core sampling call. th.cuda.synchronize() before
-        # AND after is required -- CUDA kernel launches are async, so a bare
-        # time.time() around an unsynchronized call mostly measures launch
-        # overhead, not actual GPU compute time.
-        th.cuda.synchronize()
-        t0 = time.time()
         with autocast():
             samples, pred_xstart_list = sample_fn(
                 model,
@@ -279,23 +210,6 @@ def main():
                 x_start=x_start,
                 gap=step_gap
             )
-        th.cuda.synchronize()
-        elapsed = time.time() - t0
-
-        if rank == 0:
-            append_timing_row(args.timing_csv, {
-                "method": "normal",
-                "steps": args.step,
-                "repeat_idx": args.repeat_idx,
-                "batch_idx": batch_counter,
-                "num_sentences": x_start.shape[0],
-                "elapsed_sec": elapsed,
-                "sec_per_sentence": elapsed / x_start.shape[0],
-                "checkpoint": os.path.basename(args.model_path),
-                "seed": args.seed2,
-                "note": args.note,
-            })
-        batch_counter += 1
 
         # ADDED 24/06/2026: NEW CHANGE TO GET HEATMAP/trajectories of alpha values for each token in input sequence
         # samples/pred_xstart_list are lists of length num_steps, each element shape (bsz, seq_len, hidden_dim).
@@ -308,57 +222,59 @@ def main():
             for b in range(bsz):
                 smiles_len = (input_ids_mask_ori[b] == 0).sum().item()  # source (SMILES) positions
 
-                # Trim to the real (non-pad) caption length FIRST, so every array below
-                # — token/entropy/zt trajectories, alpha/beta schedule, and labels — is
-                # sliced to the exact same [smiles_len : smiles_len + caption_len] window.
-                caption_ids = input_ids_x[b, smiles_len:].squeeze(-1).tolist()
-                while len(caption_ids) > 0 and caption_ids[-1] == tokenizer.pad_token_id:
-                    caption_ids.pop()
-                caption_len = len(caption_ids)
-
-                if tokenizer.tokenizer == 'dual' or isinstance(tokenizer.tokenizer, dict):
-                    position_labels = [tokenizer.rev_tokenizer.get(x, '[UNK]') for x in caption_ids]
-                else:
-                    position_labels = tokenizer.tokenizer.convert_ids_to_tokens(caption_ids)
-
-                cap_slice = slice(smiles_len, smiles_len + caption_len)
-
                 # --- per-step denoising trajectory (needs the sampling loop) ---
                 zt_trajectory = []
-                token_trajectory = []
+                token_trajectory = []     # shape will be (num_steps, caption_len)
                 entropy_trajectory = []
-                pred_xstart_trajectory = [] 
 
                 for zt, pred_x0 in zip(samples, pred_xstart_list):
-                    zt_trajectory.append(zt[b, cap_slice].cpu().numpy())              # noisy embedding
-                    pred_xstart_trajectory.append(pred_x0[b, cap_slice].cpu().numpy())
-                    step_logits = model.get_logits(pred_x0[b:b+1])                    # logits from clean-x0 estimate
-                    step_tokens = th.argmax(step_logits, dim=-1)
-                    token_trajectory.append(step_tokens[0, cap_slice].cpu().numpy())
+                    zt_trajectory.append(zt[b, smiles_len:].cpu().numpy())              # noisy embedding
 
-                    probs = th.softmax(step_logits[0, cap_slice], dim=-1)
+                    step_logits = model.get_logits(pred_x0[b:b+1])                     # logits from the model's clean-x0 prediction, NOT the noisy zt
+                    step_tokens = th.argmax(step_logits, dim=-1)
+                    token_trajectory.append(step_tokens[0, smiles_len:].cpu().numpy())
+
+                    probs = th.softmax(step_logits[0, smiles_len:], dim=-1)
                     ent = -(probs * th.log(probs + 1e-10)).sum(dim=-1)
                     entropy_trajectory.append(ent.cpu().numpy())
 
                 token_trajectory = np.array(token_trajectory)      # (num_steps, caption_len)
                 entropy_trajectory = np.array(entropy_trajectory)  # (num_steps, caption_len)
 
+                # per-position token strings, one per real (non-pad) caption token -- NOT the
+                # joined/cleaned sentence string that tokenizer.decode_token() returns, since we
+                # need one label per row/column, aligned with the trajectories above.
+                caption_ids = input_ids_x[b, smiles_len:].squeeze(-1).tolist()
+                while len(caption_ids) > 0 and caption_ids[-1] == tokenizer.pad_token_id:
+                    caption_ids.pop()
+                if tokenizer.tokenizer == 'dual' or isinstance(tokenizer.tokenizer, dict):
+                    position_labels = [tokenizer.rev_tokenizer.get(x, '[UNK]') for x in caption_ids]
+                else:
+                    position_labels = tokenizer.tokenizer.convert_ids_to_tokens(caption_ids)
+                caption_len = len(position_labels)
+
+                # decode token ids to a readable string too, just for the plot title/reference
                 ref_tokens = tokenizer.decode_token(input_ids_x[b, smiles_len:])
 
                 # --- alpha / beta noise-schedule trajectory (static, from --time_schedule_path) ---
-                # diffusion.alphas_cumprod has shape (num_timesteps, full_seq_len). The column
-                # axis is ABSOLUTE position in source+caption (it broadcasts against
-                # x_start_mean.shape == [bsz, full_seq_len, hidden]), so caption columns start
-                # at `smiles_len`, not at 0 — that was the earlier bug.
-                # Row 0 = t=0 (clean) ... row num_timesteps-1 = noisiest; flip to match the
-                # noisiest-first -> clean-last order of `samples`/`pred_xstart_list`.
-                alpha_traj = diffusion.alphas_cumprod[:, cap_slice].copy()   # (num_timesteps, caption_len)
-                alpha_prev = np.vstack([alpha_traj[:1], alpha_traj[:-1]])
-                beta_traj = 1.0 - (alpha_traj / alpha_prev)
+                # diffusion.alphas_cumprod has shape (num_timesteps, token_max_length), where the
+                # column axis is indexed relative to the START OF THE CAPTION (not the full seq_len).
+                # Row 0 = t=0 (clean) ... row num_timesteps-1 = noisiest, which is the OPPOSITE of the
+                # display convention used above (0=noisiest/T -> -1=clean), so we flip it here.
+                # NOTE: diffusion.betas is NOT updated by _load_time_schedule (a pre-existing bug in
+                # gaussian_diffusion.py's update_time_discretized_parameters), so we recompute beta
+                # directly from alphas_cumprod instead of trusting diffusion.betas.
+                token_max_length = getattr(diffusion, 'token_max_length', None)
+                plot_len = min(caption_len, token_max_length) if token_max_length else caption_len
 
-                alpha_traj = alpha_traj[::-1]
+                alpha_traj = diffusion.alphas_cumprod[:, :plot_len].copy()          # (num_timesteps, plot_len), row0=t=0
+                alpha_prev = np.vstack([alpha_traj[:1], alpha_traj[:-1]])
+                beta_traj = 1.0 - (alpha_traj / alpha_prev)                        # matches update_time_discretized_parameters' formula
+
+                alpha_traj = alpha_traj[::-1]   # now row 0 = noisiest (t=T), row -1 = clean (t=0)
                 beta_traj = beta_traj[::-1]
 
+                # save everything for this sentence in its own file
                 sent_idx = args.start_n + sentence_counter
                 diag_path = out_path.replace('.json', f'_sent{sent_idx}_diagnostics.npz')
                 np.savez(diag_path,
@@ -367,7 +283,6 @@ def main():
                     zt_trajectory=np.array(zt_trajectory),
                     alpha_trajectory=alpha_traj,
                     beta_trajectory=beta_traj,
-                    pred_xstart_trajectory=np.array(pred_xstart_trajectory),
                     position_labels=np.array(position_labels),
                     smiles_len=smiles_len,
                     reference=np.array([ref_tokens])

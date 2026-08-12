@@ -30,47 +30,10 @@ from basic_utils import (
 )
 from timing_utils import append_timing_row  # BENCHMARK: shared CSV row logger
 
-import glob
-import re
-
-def resolve_checkpoint(model_dir, time_schedule_path):
-    if not model_dir:
-        raise ValueError("--model_dir is required")
-
-    if not os.path.isdir(model_dir):
-        raise FileNotFoundError(f"{model_dir} is not a directory")
-
-    step_match = None
-    if time_schedule_path:
-        step_match = re.search(
-            r"step_(\d+)",
-            os.path.basename(time_schedule_path)
-        )
-
-    step_suffix = f"_{step_match.group(1)}.pt" if step_match else ".pt"
-
-    pt_files = glob.glob(os.path.join(model_dir, "*.pt"))
-
-    if not pt_files:
-        raise FileNotFoundError(
-            f"No checkpoint (.pt) found inside {model_dir}"
-        )
-
-    matching = [f for f in pt_files if f.endswith(step_suffix)]
-
-    if matching:
-        return matching[0]
-
-    ema = [f for f in pt_files if "ema" in os.path.basename(f)]
-    if ema:
-        return ema[0]
-
-    return pt_files[0]
-
-
 def create_argparser():
-    defaults = dict(model_dir='', step=0, out_dir='', top_p=0.0, rejection_rate=0.0, note='none', time_schedule_path='', save_trajectories=False,
-                     timing_csv='benchmark_timing.csv', repeat_idx=0)  # BENCHMARK: new CLI args
+    defaults = dict(model_path='', step=0, out_dir='', top_p=0.0, rejection_rate=0.0, note='none', time_schedule_path='', save_trajectories=False,
+                     timing_csv='benchmark_timing.csv', repeat_idx=0,
+                     K=20, J_path='', profile_batches=10, smooth_sigma=5.0, T_subset=0, solver_order=2)  # BENCHMARK: new CLI args
     decode_defaults = dict(split='valid', clamp_step=0, seed2=105, clip_denoised=False, start_n=0)
     defaults.update(load_defaults_config())
     defaults.update(decode_defaults)
@@ -87,10 +50,7 @@ def create_argparser():
 @th.no_grad()
 def main():
     args = create_argparser().parse_args()
-    args.model_path = resolve_checkpoint(
-    args.model_dir,
-    args.time_schedule_path
-    )
+
     dist_util.setup_dist()
     logger.configure()
     
@@ -274,48 +234,63 @@ def main():
     print('Start from ...', args.start_n)
     all_test_data = all_test_data[args.start_n:]
 
-    from dpm_solver_pytorch import NoiseScheduleVP, model_wrapper, DPM_Solver
+    from dpm_solver_token_adaptive import TokenAdaptiveDPM_Solver, build_token_timestep_matrix, token_model_wrapper
 
-    # The adaptive noise schedule is 2D: (num_timesteps, seq_len) with per-token
-    # betas. NoiseScheduleVP requires a 1D schedule (one scalar per timestep).
-    # Average across tokens to get the best global approximation.
-    betas_for_solver = diffusion.betas
-    if betas_for_solver.ndim == 2:
-        logger.log(f"### Averaging 2D betas {betas_for_solver.shape} across tokens for DPM-Solver")
-        betas_for_solver = betas_for_solver.mean(axis=1)
-    noise_schedule = NoiseScheduleVP(schedule='discrete', betas=th.from_numpy(betas_for_solver))
+    if args.J_path and os.path.exists(args.J_path):
+        J = np.load(args.J_path)
+        print(f"Loaded J from {args.J_path}")
+    else:
+        print("Profiling to build J matrix...")
+        data_profiler = load_data_text(
+            batch_size=args.batch_size,
+            seq_len=args.seq_len,
+            deterministic=True,
+            data_args=args,
+            split=args.split,
+            loaded_vocab=tokenizer,
+            model_emb=model_emb.cpu(),
+            loop=False
+        )
+        J = build_token_timestep_matrix(
+            model=model, diffusion=diffusion,
+            data_loader=data_profiler,
+            K=args.K, device=dist_util.dev(),
+            T_subset=args.T_subset or None,
+            smooth_sigma=args.smooth_sigma,
+            profile_batches=args.profile_batches,
+        )
+        save_path = args.J_path or "J_adaptive.npy"
+        np.save(save_path, J)
+        print(f"Saved J to {save_path}")
+
+    J_tensor = th.from_numpy(J).long().to(dist_util.dev())
 
     # NEW: Lists to store our trajectories during the solver loop
     samples_traj = []
     pred_xstart_traj = []
 
-    # model_wrapper(model_type="x_start") is correct:
-    #   The model returns pred_x0. model_wrapper converts it to noise:
-    #       noise = (x - alpha_t * pred_x0) / sigma_t
-    #   DPM_Solver.data_prediction_fn() then inverts: x0 = (x - sigma_t * noise) / alpha_t
-    #   This round-trip is exact. The solver's correcting_x0_fn hook fires on the
-    #   recovered pred_x0, which is the correct place to apply denoised_fn_round.
-    model_kwargs = {}
-    model_fn = model_wrapper(
-        model,
-        noise_schedule,
-        model_type="x_start",  # model returns pred_x0
-        model_kwargs=model_kwargs,
-        guidance_type="uncond",
-    )
+    alphas_cumprod_t = th.from_numpy(diffusion.alphas_cumprod).float().to(dist_util.dev())
+    model_fn = token_model_wrapper(model, alphas_cumprod_t, model_kwargs={})
 
-    # correcting_x0_fn is called by DPM_Solver.data_prediction_fn() on the recovered
-    # pred_x0 at every model evaluation -- exactly where denoised_fn_round must run.
     def rounding_corrector(x0, t=None):
         rounded_x0, _ = denoised_fn_round(args, model_emb, x0, t)
         return rounded_x0
 
-    dpm_solver = DPM_Solver(
-        model_fn,
-        noise_schedule,
+    dpm_solver = TokenAdaptiveDPM_Solver(
+        model_fn=model_fn,
+        alphas_cumprod_2d=alphas_cumprod_t,
         algorithm_type="dpmsolver++",
         correcting_x0_fn=rounding_corrector,
     )
+
+    def sample_x_at_J0(x_start, t_ids_row0, diffusion, noise, device):
+        ac = th.from_numpy(diffusion.alphas_cumprod).float().to(device)
+        L = x_start.shape[1]
+        ac_t = ac[t_ids_row0, th.arange(L, device=device)]
+        alpha = th.sqrt(ac_t)[None, :, None]
+        sigma = th.sqrt(1.0 - ac_t)[None, :, None]
+        return alpha * x_start + sigma * noise
+
 
     sentence_counter = 0  # BENCHMARK: needed by the trajectory-saving block below (was referenced but never initialized)
     batch_counter = 0     # BENCHMARK: running count of real batches, for timing rows
@@ -334,29 +309,22 @@ def main():
 
         noise = th.randn_like(x_start)
         input_ids_mask = th.broadcast_to(input_ids_mask.unsqueeze(dim=-1), x_start.shape).to(dist_util.dev())
-        x_noised = th.where(input_ids_mask==0, x_start, noise)
+        x_noised = sample_x_at_J0(x_start, J_tensor[0], diffusion, noise, dist_util.dev())
+        x_noised = th.where(input_ids_mask==0, x_start, x_noised)
+        
         # Clear trajectories for the current batch
         samples_traj.clear()
         pred_xstart_traj.clear()        
-        ## You can use steps = 10, 12, 15, 20, 25, 50, 100.
-        ## Empirically, we find that steps in [10, 20] can generate quite good samples.
-        ## And steps = 20 can almost converge.
 
-        # BENCHMARK: time only the core sampling call. th.cuda.synchronize() before
-        # AND after is required -- CUDA kernel launches are async, so a bare
-        # time.time() around an unsynchronized call mostly measures launch
-        # overhead, not actual GPU compute time.
         th.cuda.synchronize()
         t0 = time.time()
         with autocast():
             x_sample = dpm_solver.sample(
                 x_noised,
-                steps=SOLVER_STEP,
-                order=2,
-                skip_type="time_uniform",
-                method="multistep",
-                input_ids_mask=input_ids_mask,
+                J=J_tensor,
+                order=args.solver_order,
                 x_start=x_start,
+                input_ids_mask=input_ids_mask,
             )
         th.cuda.synchronize()
         elapsed = time.time() - t0

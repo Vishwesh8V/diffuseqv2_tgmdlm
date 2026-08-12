@@ -111,25 +111,41 @@ def helper_tokenize(sentence_lst, vocab_dict, seq_len):
     def merge_and_mask(group_lst):
         lst = []
         mask = []
+        # ADDED: New Change added ratio by which the reservation of tokens happen for smiles and captions
+        # --- Set SMILES-to-Sequence ratio here ---
+        smiles_ratio = 0.66 
+        
+        # Determine the structural split dynamically
+        src_budget = int(seq_len * smiles_ratio)
+        trg_budget = seq_len - src_budget 
         
         for i in range(len(group_lst['input_id_x'])):
             end_token = group_lst['input_id_x'][i][-1]
             src = group_lst['input_id_x'][i][:-1]
             trg = group_lst['input_id_y'][i][:-1]
-            while len(src) + len(trg) > seq_len - 3:
-                if len(src)>len(trg):
-                    src.pop()
-                elif len(src)<len(trg):
-                    trg.pop()
-                else:
-                    src.pop()
-                    trg.pop()
-
+            
+            # 1. SMILES (src) partition
+            if len(src) > (src_budget - 1):
+                src = src[:(src_budget - 1)]  # Truncate to leave room for the end token
             src.append(end_token)
-
+            if len(src) < src_budget:
+                src = src + [vocab_dict.pad_token_id] * (src_budget - len(src))  
+                
+            # 2. Caption (trg) partition
+            if len(trg) > (trg_budget - 2):
+                trg = trg[:(trg_budget - 2)]  # Truncate to leave room for sep and end tokens
             trg.append(end_token)
-            lst.append(src + [vocab_dict.sep_token_id] + trg)
-            mask.append([0]*(len(src)+1) + [1]*len(trg))            
+            
+            # Combine the sep token with the processed target caption
+            full_trg = [vocab_dict.sep_token_id] + trg
+            if len(full_trg) < trg_budget:
+                full_trg = full_trg + [vocab_dict.pad_token_id] * (trg_budget - len(full_trg))  
+
+            # 3. Concatenate both parts 
+            lst.append(src + full_trg)
+            
+            # 4. Set the input mask dynamically
+            mask.append([0] * src_budget + [1] * trg_budget)
             
         group_lst['input_ids'] = lst
         group_lst['input_mask'] = mask
