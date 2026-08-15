@@ -48,3 +48,153 @@
 {"src": "CC(CO)C1=C(C(=C2C(=C1)C(C3C4C2(CCCC4(C)C)C(=O)O3)O)O)O", "trg": "This molecule is a natural product found in Salvia mellifera with data available."}
 {"src": "CC1CCCCOC(C(CN(C(=O)C2=C(O1)C=CC(=C2)NC(=O)C3CCCCC3)C(C)CO)C)CN(C)CC4=CC=NC=C4", "trg": "This molecule is an azamacrocycle and a lactam."}
 {"src": "CC1C(=O)NC(=CC2=C(NC3=C(C=CC=C23)CC(C(C)(C)O)O)C(C)(C)C=C)C(=O)N1", "trg": "This molecule is a natural product found in Aspergillus ruber with data available."}
+{"src": "C1C(C(OC1N2C3=C(C(=O)NC(=N3)N)NC2=O)COP(=O)([O-])OP(=O)([O-])OP(=O)(O)[O-])O", "trg": "This molecule is a 2'-deoxyribonucleoside triphosphate oxoanion that is a trianion of 8-oxo-dGTP arising from partial deprotonation of the triphosphate OH groups. It is a conjugate base of an 8-oxo-dGTP. It is a conjugate acid of an 8-oxo-dGTP(4-)."}
+{"src": "CC1CCCCOC(C(CN(C(=O)C2=C(O1)C=CC(=C2)NS(=O)(=O)C3=CC=CC=C3)C(C)CO)C)CN(C)C", "trg": "This molecule is a lactam and an azamacrocycle."}
+{"src": "COC1=C(C=C(C=C1)C2=C(C(=O)C3=C(C=C(C=C3O2)O)O)OC)O", "trg": "This molecule is a dimethoxyflavone that is the 3,4'-dimethyl ether derivative of quercetin. Isolated from Combretum quadrangulare, it exhibits antineoplastic activity. It has a role as a metabolite and an antineoplastic agent. It is a trihydroxyflavone and a dimethoxyflavone. It is functionally related to a quercetin."}
+{"src": "CC(CCC=C(C)C)C1CCC2(C1(CCC34C2CCC5C3(C4)C(CC(C5(C)C(=O)O)OC6C(C(C(CO6)O)O)O)O)C)C", "trg": "This molecule is a natural product found in Combretum molle with data available."}
+{"src": "CC1C(CC2=C(C(OC(C12)OC3C(C(C(C(O3)CO)O)O)O)OC)C(=O)OC)O", "trg": "This molecule is a natural product found in Phlomis aurea with data available."}
+{"src": "CC(C)CC(=O)OCC(C(CO)O)O", "trg": "This molecule is a natural product found in Armillaria with data available."}
+{"src": "C1=CC2=C(C(=C1)O)C(=O)C3=C(C=CC4=C3C2=NN4CCNCCO)NCCNCCO", "trg": "This molecule is an anthrapyrazole-based antineoplastic antibiotic. This molecule intercalates into DNA, induces single- and double-stranded DNA breaks and inhibits topoisomerase II, thereby inhibiting DNA replication and repair as well as RNA and protein synthesis. This molecule is less cardiotoxic than doxorubicin."}
+{"src": "CC1C(=O)CCC2C1(CCC3C2(CCC4(C3(CCC5(C4CC(CC5)(C)C)CO)C)C)C)C", "trg": "This molecule is a natural product found in Celastrus monospermus, Calophyllum brasiliense, and Camellia japonica with data available."}
+{"src": "CC(=CCOC1C2(C(N3C1(C(=O)N4CCCC4C3=O)O)CC(C)(C)O)C(=O)C5=C(N2)C=C(C=C5)OC)C", "trg": "This molecule is a natural product found in Aspergillus fischeri with data available."}
+{"src": "CC(C)CCCCCCCCCCCCCCCCCCCCCCCCC(=O)O", "trg": "This molecule is a natural product found in Cyanthillium cinereum with data available."}
+{"src": "CCC=CCC=CCC(C=CC=CCC=CCC=CCCC(=O)[O-])OO", "trg": "This molecule is a polyunsaturated fatty acid anion that is the conjugate base of 14-HPDHE, obtained by deprotonation of the carboxy group; major species at pH 7.3. It is functionally related to a (4Z,7Z,10Z,13Z,16Z,19Z)-docosahexaenoate. It is a conjugate base of a 14-HPDHE."}
+{"src": "CCCC=CC=CC=CC1CC2C1C=CC(=O)OCC3(C4C3(CC(C5(C4C=C(CC6(C5C=C(C6=O)C)O)CO)O)C)OC(=O)CC=CC=CC=C2)C", "trg": "This molecule is a natural product found in Jatropha curcas with data available."}
+{"src": "CC1CN(C(=O)C2=C(C3=CC=CC=C3COC1CN(C)C(=O)NC4=CC=CC=C4OC)C5=CC=CC=C5N2C)C(C)CO", "trg": "This molecule is an indolyl carboxylic acid."}
+{"src": "CC1CC(=O)C2=C(C3=C(C=CC=C3OC2(C1O)C(=O)OC)O)O", "trg": "This molecule is a natural product found in Clohesyomyces with data available."}
+{"src": "COC1=CC=C(C=C1)S(=O)(=O)NC2=CC3=C(C=C2)OC4C3CC(OC4CO)CC(=O)NCC5CC5", "trg": "This molecule is a sulfonamide."}
+{"src": "CC(C)C1CCC2C1(CCC3(C2(CC=C4C3CCC5C4(CCC(=O)C5(C)C)C)C)C)C", "trg": "This molecule is a natural product found in Iris tenuifolia, Artemisia argyi, and other organisms with data available."}
+{"src": "C=CCN1CCC2=C(CC1)SC(=N2)N", "trg": "This molecule is an azepine."}
+{"src": "CC(=O)OCC1C(C(C(C(O1)OC2(C(C(C(O2)COC(=O)C=CC3=CC(=C(C=C3)O)OC)O)OC(=O)C=CC4=CC(=C(C=C4)O)OC)CO)OC(=O)C)O)O", "trg": "This molecule is a natural product found in Persicaria perfoliata with data available."}
+{"src": "COC1=CC(=CC(=C1OC2C(C(C(C(O2)COC(=O)C3=CC(=C(C=C3)O)OC)O)O)O)OC)O", "trg": "This molecule is a natural product found in Alnus firma with data available."}
+{"src": "CC(CC(=O)CC(C)C(=O)O)C1CC(=O)C2(C1(CC(=O)C3=C2C(CC4C3(CCC(=O)C4(C)C)C)O)C)C", "trg": "This molecule is a natural product found in Ganoderma lucidum with data available."}
+{"src": "C[C@@H]1[C@@H](C(=O)N[C@H](C(=O)N[C@H]2CC[C@H](N(C2=O)[C@H](C(=O)N([C@H](C(=O)N[C@H](C(=O)O1)C(C)C)CC3=CC=C(C=C3)O)C)CC(C)C)O)CCCN=C(N)N)NC(=O)[C@@H](CC(C)C)NC(=O)[C@@H](COS(=O)(=O)O)O", "trg": "This molecule is a natural product found in Microcystis aeruginosa with data available."}
+{"src": "CC1=CCC(OC1=O)C(C)C2CCC3(C2(C(CC45C3CCC(C4(C5)CCC(=O)O)C(=C)C)OC(=O)C)C)C", "trg": "This molecule is a natural product found in Kadsura heteroclita and Kadsura polysperma with data available."}
+{"src": "CCCCCCCCCCCCCCCCCC(=O)CCCCCCCCCCCCC", "trg": "This molecule is a natural product found in Solanum tuberosum with data available."}
+{"src": "CCCCCC/C=C\\CCCCCCCC(=O)O", "trg": "This molecule is a natural product found in Pterodon emarginatus, Dryopteris assimilis, and other organisms with data available."}
+{"src": "CC(C)C1(C(C2(C3(CC4(C1(C2(C5(C3(CC=C(C5O)CO)O)O4)O)C)O)C)O)OC(=O)C6=CC=CN6)O", "trg": "This molecule is a natural product found in Ryania speciosa with data available."}
+{"src": "CC(C)N(C(C)C)C(=O)SCC(=C(Cl)Cl)Cl", "trg": "This molecule is a tertiary amine."}
+{"src": "CC1CCCC2C1(C(C3=C(C(=O)OC3(C2)OC)C)O)C", "trg": "This molecule is a natural product found in Ligularia virgaurea with data available."}
+{"src": "CC1C2C(CC3=C1C=CO3)C4(CCCC(C4(C(C2O)OC(=O)C5=CC=CC=C5)O)(C)C)C", "trg": "This molecule is a natural product found in Caesalpinia pulcherrima with data available."}
+{"src": "CS(=O)(=O)N1C(C(C12CN(C2)C(=O)C3=CC=CC=C3F)C4=CC=CC=C4)CO", "trg": "This molecule is a ring assembly, a member of benzenes and a member of azetidines."}
+{"src": "CC(C)CC(C(=O)NC(CC(=O)N)C(=O)NC(CCC(=O)N)C(=O)O)N", "trg": "This molecule is a peptide."}
+{"src": "CC1C(C(C(C(O1)OC2C(C(COC2OC3=C(OC4=C(C3=O)C(=CC(=C4CC=C(C)C)OC5C(C(C(C(O5)CO)O)O)O)O)C6=CC=C(C=C6)O)O)O)O)O)O", "trg": "This molecule is a natural product found in Epimedium grandiflorum and Epimedium diphyllum with data available."}
+{"src": "CC(=O)OCC1C(C(C(C(O1)OC2C3C(=CC(C3(C=CO2)O)OC(=O)C)COC(=O)C)OC(=O)C)OC(=O)C)OC(=O)C", "trg": "This molecule is a natural product found in Rehmannia glutinosa with data available."}
+{"src": "CC1C(C(CC(O1)OC2C(OC(CC2OC)OC3C(OC(CC3OC)OC4CC5=CCC6C(C5(C(C4=O)O)C)CCC(C6=O)(C)C7=C(OC=C7)C)C)C)OC)O", "trg": "This molecule is a natural product found in Vincetoxicum atratum with data available."}
+{"src": "C1=CC=NC(=C1)C(=NOC(=O)CC2=CC=C(C=C2)Cl)N", "trg": "This molecule is an organochlorine compound."}
+{"src": "CC1=C2C(COC2=O)COP(=O)(O1)OCCCCCCCCCCCCCCCCO", "trg": "This molecule is a natural product found in Streptomyces with data available."}
+{"src": "CC1=C2CC=C(C2C(C(CC1)C(C)CCC3C(O3)(C)C)OC(=O)C)C", "trg": "This molecule is a natural product found in Dictyota acutiloba with data available."}
+{"src": "C1=CC(=C(C=C1NC2=NC=NC3=CC(=C(C=C32)OCCCNCCCO)O)Cl)F", "trg": "This molecule is a member of quinazolines."}
+{"src": "C1C(C(OC2=CC(=CC(=C21)O)O)C3=CC(=C(C=C3)O)O)OC4(C(C(C5=C(C=C(C=C5O4)O)O)O)O)C6=CC(=C(C=C6)O)O", "trg": "This molecule is a natural product found in Vaccinium virgatum, Vitis vinifera, and other organisms with data available."}
+{"src": "C1=CC=C(C=C1)C=NNC2=CC=C(C=C2)C=O", "trg": "This molecule is a natural product found in Agaricus sylvicola and Agaricus arvensis with data available."}
+{"src": "CC(C)(C1CC2=C(O1)C=CC(=C2)C=CC=O)O", "trg": "This molecule is a natural product found in Zanthoxylum wutaiense with data available."}
+{"src": "OS(=O)(=O)S(=O)(=O)O", "trg": "This molecule is a sulfur oxoacid. It is a conjugate acid of a dithionate(1-)."}
+{"src": "C1C2C(C(C(C(O2)O)OC(=O)C3=CC(=C(C(=C3OC4=C(C(=C5C(=C4)C(=O)OCC6C(C7C(C(O6)O)OC(=O)C8=CC(=C(C(=C8C9=C(C(=C(C=C9C(=O)O7)O)O)O)O)O)O)OC(=O)C2=CC(=C(C(=C25)O)O)O)O)O)O)O)O)OC(=O)C2=CC(=C(C(=C2)O)O)O)OC(=O)C2=CC(=C(C(=C2C2=C(C(=C(C=C2C(=O)O1)O)O)O)O)O)O", "trg": "This molecule is a natural product found in Camellia oleifera and Camellia japonica with data available."}
+{"src": "CC(CCC(CC(=CCl)CCCC#C)O)CC(C)C(CCCCC(C)C(CC=C)O)O", "trg": "This molecule is a natural product found in Trichodesmium thiebautii with data available."}
+{"src": "CCCCC1=C(C(=O)C(C1=O)(C)CN2C3C(CCO3)(C4=CC=CC=C42)O)C", "trg": "This molecule is a natural product found in Streptomyces with data available."}
+{"src": "C=C(CC1=CC=C(C=C1)O)C(=C)CC2=CC=C(C=C2)O", "trg": "This molecule is a lignan that consists of buta-1,3-diene substituted by 4-hydroxybenzyl groups at positions 2 and 3. It is isolated from the ground stems of Anogeissus acuminata and exhibits anti-HIV activity by inhibiting HIV-1 reverse transcriptase enzyme. It has a role as a metabolite and a HIV-1 reverse transcriptase inhibitor. It is a lignan and a member of phenols."}
+{"src": "CC1C(C(C(C(O1)OC2C(C(C(OC2OC(=O)C34CCC(CC3C5=CCC6C(C5(CC4)C)(CCC7C6(CC(C(C7(C)CO)O)O)C)C)(C)C)CO)O)O)O)OC8C(C(CO8)(CO)O)O)OC9C(C(C(CO9)O)O)O", "trg": "This molecule is a natural product found in Polygala japonica with data available."}
+{"src": "CCC1CC2CC3C4CC=CC(=O)NCCCC5C(=O)C(=C(C=CC4CC(=O)C3C2C1C)O)C(=O)N5", "trg": "This molecule is a natural product found in Streptomyces with data available."}
+{"src": "C(C(CS)C(=O)O)S", "trg": "This molecule is a natural product found in Asparagus officinalis with data available."}
+{"src": "CC1(CCCC2(C1CCC34C2CCC(C3)C(=C4)CO)C)CO", "trg": "This molecule is a natural product found in Ozothamnus ferrugineus with data available."}
+{"src": "C1=CC=C(C=C1)CCOC(=O)CC2=CNC3=CC=CC=C32", "trg": "This molecule is a carboxylic ester resulting from the formal condensation of the carboxy group of indole-3-acetic acid with the hydroxy group of 2-phenylethanol. It has a role as an antifungal agent and a fungal metabolite. It is a member of indoles and a carboxylic ester. It is functionally related to a 2-phenylethanol and an indole-3-acetic acid."}
+{"src": "C(CCN)CC(C(=O)O)NC(=O)CNC(=O)C(CC(=O)N)N", "trg": "This molecule is a peptide."}
+{"src": "CC1C2CCC(C2=CC3(C(CC(=C3CC1O)C(C)C)O)C)(COC)O", "trg": "This molecule is a natural product found in Alternaria brassicicola with data available."}
+{"src": "CC1=CCCC(=CC2C(CC=C(C(=O)CC1)C)C(=C)C(=O)O2)C", "trg": "This molecule is a natural product found in Sarcophyton crassocaule with data available."}
+{"src": "CC1C(C(C(O1)(CO)O)O)O", "trg": "This molecule is a metabolite found in or produced by Escherichia coli (strain K12, MG1655)."}
+{"src": "CC1CC(C2(CCC3(C(=CCC4C3(CCC5C4(CCC(C5(C)C)O)C)C)C2C1C)C)C(=O)OC6C(C(C(C(O6)CO)O)O)O)O", "trg": "This molecule is a triterpenoid saponin that is urs-12-ene substituted by hydroxy groups at positions 3 and 22, an oxo group at position 28 and a beta-D-glucopyranosyloxy group at position 28. It has been isolated from the leaves and twigs of Juglans sinensis. It has a role as a plant metabolite. It is a carboxylic ester, a beta-D-glucoside, a monosaccharide derivative, a pentacyclic triterpenoid and a triterpenoid saponin. It derives from a hydride of an ursane."}
+{"src": "COC(=O)CCCC#CC=CC(=O)OC", "trg": "This molecule is a natural product found in Xestospongia testudinaria with data available."}
+{"src": "CC12CC(C3=C(O1)C=C(C=C3)O)C4=C(C2=O)C5=C(O4)C=C(C=C5OC(=O)C6=C(C=C(C=C6)O)O)C7=CC8=C(O7)C=C(C=C8)O", "trg": "This molecule is a natural product found in Morus alba with data available."}
+{"src": "CC1C(C(C(C(O1)OC2C(C(OC(C2O)OCCC3=CC(=C(C=C3)O)O)COC(=O)C=CC4=CC(=C(C=C4)O)O)O)O)O)O", "trg": "This molecule is a natural product found in Amphilophium crucigerum with data available."}
+{"src": "C1C[C@@H](NC1)C2=CN=CC=C2", "trg": "This molecule is a member of pyridines and a member of pyrrolidines. It is an enantiomer of a (S)-nornicotine."}
+{"src": "C[C@]12C=CC3=C4CCC(=O)C=C4CC[C@H]3[C@@H]1CC[C@@H]2O", "trg": "This molecule is a steroid used on livestock to increase muscle growth and appetite. To increase its effective half-life, trenbolone is administered as a prodrug as an ester conjugate such as [trenbolone acetate], trenbolone enanthate, or trenbolone cyclohexylmethylcarbonate. Plasma lipases then cleave the ester group in the bloodstream leaving free trenbolone."}
+{"src": "CC1(CCCC2(C1CCC34C2(C(CC(C3)C(=C)C4)O)O)C)C", "trg": "This molecule is a natural product found in Vellozia caput-ardeae with data available."}
+{"src": "CC=C1CN(C2CC3=C(C(CC1C2(CO)C(=O)OC)N4C5=CC=CC=C5C6=C4C(CC7C(=CC)CN(C(C6)C7(CO)C(=O)OC)C)O)NC8=CC=CC=C38)C", "trg": "This molecule is a natural product found in Tabernaemontana corymbosa with data available."}
+{"src": "CC1CN(C(=O)C2=C(C(=CC=C2)NC(=O)C3CCOCC3)OC1CN(C)C(=O)NC4=CC=C(C=C4)C(F)(F)F)C(C)CO", "trg": "This molecule is a member of ureas."}
+{"src": "CC(C)(C=C)N1C=C(C2=CC=CC=C21)CC3C(=O)NC(C(=O)N3)CC4=CNC5=CC=CC=C54", "trg": "This molecule is a natural product found in Penicillium simplicissimum with data available."}
+{"src": "CC1(CCC2(CCC3(C(=CCC4C3(CCC5C4(CCC(C5(C)CO)OC6C(C(C(C(O6)C(=O)O)O)O)O)C)C)C2C1)C)C(=O)OC7C(C(C(C(O7)CO)O)O)O)C", "trg": "This molecule is a natural product found in Ilex rotunda and Galium rivale with data available."}
+{"src": "CC(=O)NC1C(C(C(OC1O)CO)OC2C(C(C(C(O2)CO)OC3C(C(C(C(O3)COC4C(C(C(C(O4)COC5C(C(C(C(O5)CO)O)O)NC(=O)C)O)O)OC6C(C(C(C(O6)CO)O)O)NC(=O)C)O)OC7C(C(C(C(O7)CO)OC8C(C(C(C(O8)CO)O)O)NC(=O)C)O)O)O)O)NC(=O)C)O", "trg": "This molecule is an amino sugar."}
+{"src": "C1=CC(=C(C=C1O)COC2=CC(=C(C=C2)O)CO)O", "trg": "This molecule is a natural product found in Penicillium terrestre and Penicillium solitum with data available."}
+{"src": "CCCCOC=O", "trg": "This molecule is a natural product found in Aloe africana, Plectranthus glabratus, and Mangifera indica with data available."}
+{"src": "CC(=NOC(=O)C1=CC=C(C=C1)OC)C2=NC=CN=C2", "trg": "This molecule is a methoxybenzoic acid."}
+{"src": "CCC(C)C1C(=O)NC(C(=O)NC(C2=NC(=CS2)C(=O)NC(C(=O)N3CCCC3C(=O)NC(C(=O)NC(C4=NC(CS4)C(=O)N1)CC(C)C)CO)CC(=O)N)CC5=CC=C(C=C5)O)CC(C)C", "trg": "This molecule is a natural product found in Lyngbya majuscula with data available."}
+{"src": "CC(CCCCCCC1=CC=CC=C1)CC2(CC(OO2)(C)CC(=O)OC)C", "trg": "This molecule is a natural product found in Plakinastrella onkodes with data available."}
+{"src": "CC1(CCC2(CCC3(C(=CCC4C3(CCC5C4(CCC(C5(C)C)OC6C(C(C(C(O6)C(=O)O)OC7C(C(C(O7)CO)O)O)OC8C(C(C(C(O8)CO)O)O)O)O)C)C)C2C1)C)C(=O)OC9C(C(C(C(O9)CO)O)O)O)C", "trg": "This molecule is a natural product found in Aralia elata with data available."}
+{"src": "CC1CC(=NC1)C(=O)C(C)C2CCC3C2(CCC4C3CCC5C4(CCC(C5=O)O)C)C", "trg": "This molecule is a natural product found in Solanum obliquum and Solanum oblongifolium with data available."}
+{"src": "COC1=C(C(=C2C(=O)CC(OC2=C1)C3=CC=CC=C3)O)OC", "trg": "This molecule is a natural product found in Onychium siliculosum and Miliusa balansae with data available."}
+{"src": "CNCCCN1C2=C(C=C(C=C2)O)SC3=C1C=C(C=C3)Cl", "trg": "This molecule is a member of phenothiazines."}
+{"src": "CC(C)C1CCC2(C1C3C=CC4C5(CCC(C(C5CCC4(C3(CC2)C)C)(C)C)OC(=O)C)C)C", "trg": "This molecule is a natural product found in Richterago discoidea with data available."}
+{"src": "CCCC(=O)NCCCCCl", "trg": "This molecule is a natural product found in Aloidendron sabaeum with data available."}
+{"src": "CCC1C=CC(=O)OC1C=CC(CCN)(C(CC(C=CC=CC2CCCC(C2)OC(=O)CCCCCC(C)C)O)OP(=O)(O)O)O", "trg": "This molecule is a natural product found in Streptomyces platensis with data available."}
+{"src": "C=CCCCC=CC(=O)O", "trg": "This molecule is a medium-chain fatty acid."}
+{"src": "COC1=C(C(=C(C(=C1)O)C(C=CCC(CCC2=CC=CC=C2)O)C3=CC=C(C=C3)O)O)C(=O)C=CC4=CC=C(C=C4)O", "trg": "This molecule is a natural product found in Alpinia blepharocalyx, Alpinia hainanensis, and Alpinia roxburghii with data available."}
+{"src": "CC1C(C(C(C(O1)OC2C(C(C(OC2OC3C(OC(C(C3O)NC(=O)C)OCC(C(C(C(CO)NC(=O)C)OC4C(C(C(C(O4)CO)OC5C(C(C(C(O5)CO)O)O)NC(=O)C)O)O)O)O)CO)CO)O)O)O)O)O", "trg": "This molecule is an oligosaccharide."}
+{"src": "CC1(CCCC23C1C(C(C45C2C(CC(C4O)C(=C)C5O)O)(OC3OC)O)O)C", "trg": "This molecule is a kaurane diterpenoid. It has a role as a metabolite."}
+{"src": "CCCCCC1=CC(=C2C3C=C(CCC3C(OC2=C1)(C)C)C(=O)O)O", "trg": "This molecule is a 1-benzopyran."}
+{"src": "CC(C)(C=C)C1=CC(=C(C=C1C2=COC3=C(C2=O)C(=CC(=C3)OC)OC)OC)OC", "trg": "This molecule is a natural product found in Psorothamnus arborescens with data available."}
+{"src": "CC1C(C(C(C(O1)OC2C(C(C(OC2OC(C(CO)NC(=O)C)C(C(COC3C(C(C(C(O3)COS(=O)(=O)O)O)O)NC(=O)C)O)O)CO)O)OC4C(C(C(C(O4)CO)OC5C(C(C(C(O5)CO)O)O)NC(=O)C)O)O)O)O)O", "trg": "This molecule is an oligosaccharide sulfate."}
+{"src": "CCCCCCCCCCCCCCCC(=O)OCC(COP(=O)(O)OCC(C(=O)O)N)OC(=O)CCC(=O)C=CC(=O)O", "trg": "This molecule is a phosphatidyl-L-serine."}
+{"src": "CC1C(C(C(C(O1)OCC2C(C(C(C(O2)O)NC(=O)C)O)OC3C(C(C(C(O3)CO)OC4C(C(C(C(O4)COC5C(C(C(C(O5)CO)O)O)OC6C(C(C(C(O6)CO)OC7C(C(C(C(O7)CO)O)OC8(CC(C(C(O8)C(C(CO)O)O)NC(=O)C)O)C(=O)O)O)O)NC(=O)C)O)OC9C(C(C(C(O9)CO)O)O)OC1C(C(C(C(O1)CO)OC1C(C(C(C(O1)COC1(CC(C(C(O1)C(C(CO)O)O)NC(=O)C)O)C(=O)O)O)OC1(CC(C(C(O1)C(C(CO)O)O)NC(=O)C)O)C(=O)O)O)O)NC(=O)C)O)O)NC(=O)C)O)O)O", "trg": "This molecule is a polysaccharide."}
+{"src": "CC(=O)NC1C(C(C(OC1O)CO)OC2C(C(C(C(O2)CO)OC3C(C(C(C(O3)COC4C(C(C(C(O4)CO)OC5C(C(C(C(O5)CO)OC6C(C(C(C(O6)CO)O)O)O)O)NC(=O)C)O)OC7C(C(C(C(O7)CO)O)O)NC(=O)C)O)OC8C(C(C(C(O8)CO)O)O)OC9C(C(C(C(O9)CO)O)O)NC(=O)C)O)O)NC(=O)C)O", "trg": "This molecule is an amino sugar."}
+{"src": "CC(C)(CO)[C@H](C(=O)NCCCC(=O)O)O", "trg": "This molecule is an organooxygen compound and an organonitrogen compound. It is functionally related to a gamma-amino acid."}
+{"src": "C1=CC(=CC=C1CCC2=C(C=CC(=C2)O)O)OC3=C(C=CC(=C3)CCC4=C(C=CC(=C4)O)O)O", "trg": "This molecule is a natural product found in Pellia epiphylla with data available."}
+{"src": "C(C(=O)[O-])ON", "trg": "This molecule is a monocarboxylic acid anion that is the conjugate base of (aminooxy)acetic acid, resulting from the deprotonation of the carboxy group. Major microspecies at pH 7.3. It is a conjugate base of an (aminooxy)acetic acid."}
+{"src": "CC1CCC(=C(C)C)C12CCC(=CC2)C", "trg": "This molecule is a natural product found in Widdringtonia whytei, Neoorthocaulis attenuatus, and Barbilophozia lycopodioides with data available."}
+{"src": "C1CN(CC2=CC=CC=C21)CCCNC(=O)CCN3C(=O)COC4=CC=CC=C43", "trg": "This molecule is a benzoxazine."}
+{"src": "COC1=C(C2=C(C=C1)C3C(=O)C4=CC(=C(C=C4CCN3C(=O)C2)OC)OC)OC", "trg": "This molecule is a natural product found in Abuta bullata with data available."}
+{"src": "CCCC(=O)OC1CC(C2(C(CC=C(C2C(C3(C(C(=O)OC3C=C1C)C)O)OC(=O)C)C)OC(=O)C)C)OC(=O)C", "trg": "This molecule is a natural product found in Briareum stechei with data available."}
+{"src": "CC1C(C(C(C(O1)OC2C(C(C(OC2C3=C(C=C(C4=C3OC(=CC4=O)C5=CC=C(C=C5)O)O)O)CO)O)O)O)O)OC(=O)C", "trg": "This molecule is a natural product found in Tripterospermum japonicum with data available."}
+{"src": "CCCCCCCCCCCCCCCCCCC(=O)OC(COC(=O)CCCCCCCCCCCCCCC)COP(=O)(O)OCCN", "trg": "This molecule is a metabolite found in or produced by Escherichia coli (strain K12, MG1655)."}
+{"src": "C1CC(NC1)C(=O)NC(CC2=CNC3=CC=CC=C32)C(=O)NC(CS)C(=O)O", "trg": "This molecule is an oligopeptide."}
+{"src": "CCC1=CC=CC(=C1N(C(C)COC)C(=O)C(=O)O)C", "trg": "This molecule is a monocarboxylic acid that is oxoacetic acid substituted by a (2-ethyl-6-methylphenyl)(1-methoxypropan-2-yl)amino group at position 2. It is an aromatic amide, an ether and a monocarboxylic acid."}
+{"src": "CC1C(C(C(C(O1)OC(C(CO)NC(=O)C)C(C(CO)O)OC2C(C(C(C(O2)CO)OC3C(C(C(C(O3)COC4C(C(C(C(O4)CO)O)O)O)O)OC5C(C(C(C(O5)CO)O)O)O)O)O)NC(=O)C)O)O)O", "trg": "This molecule is an oligosaccharide."}
+{"src": "C(CCCC(=O)O)CCCO", "trg": "This molecule is an omega-hydroxy fatty acid that is caprylic acid in which one of the hydrogens of the terminal methyl group is replaced by a hydroxy group. It is a straight-chain fatty acid and an omega-hydroxy-medium-chain fatty acid. It is functionally related to an octanoic acid."}
+{"src": "CC1=CC(=C(C=C1O)CC=C(C)CO)OC2C(C(C(C(O2)CO)O)O)O", "trg": "This molecule is a natural product found in Pyrola japonica with data available."}
+{"src": "CC1=CC(=O)C(=CC2=C1CC(CC2)C(C)(C)O)N", "trg": "This molecule is a natural product found in Dulacia guianensis with data available."}
+{"src": "CC1(C(CCC2(C1(CCC3(C2CC4=C(O3)C=C(OC4=O)C5=CC=C(C=C5)OC)C)O)C)O)C", "trg": "This molecule is a natural product found in Penicillium with data available."}
+{"src": "CCC=CC=CCCCC1C(O1)C#CC#CCCC(=O)OC(CO)OC(=O)CCC#CC#CC2C(O2)CCCC=CC=CCC", "trg": "This molecule is a fatty acid ester."}
+{"src": "C[C@@H]1C[C@@H]2[C@@H](CC3=CNC4=CC=CC2=C34)N(C1)C", "trg": "This molecule is a naturally occuring alkaloid of the ergoline family. As it is derived from dimethylergoline, it is referred to as a clavine. Like other ergoline alkaloids, it occurs in various species of vines of the Convolvulaceae (morning glory) family and in some species of lower fungi. Long term exposure to some ergoline alkaloids can cause ergotism, a disease causing convulsive and gangrenous symptoms. (L1918)"}
+{"src": "CC1C(CN(C(=O)C2=CC=CC(=C2OCC3C(CCC(O3)CCN(C1=O)C)OC)C#N)C)OC", "trg": "This molecule is an azamacrocycle and a lactam."}
+{"src": "CCCC(=NOCC)C1=C(CC(CC1=O)CC(C)SCC)O", "trg": "This molecule is an oily odorless liquid. Non corrosive. Used as an herbicide."}
+{"src": "C1=CC(=CC=C1C=CC(=O)OCC2C(C(C(C(O2)OC3C(C(C(OC3OC4C(C(C(OC4OC5=C(OC6=CC(=CC(=C6C5=O)O)O)C7=CC=C(C=C7)O)CO)O)O)CO)O)O)O)O)O)O", "trg": "This molecule is a natural product found in Pisum sativum with data available."}
+{"src": "CC1C(C(C(C(O1)OCC2C(C(C(C(O2)O)NC(=O)C)O)OC3C(C(C(C(O3)CO)OC4C(C(C(C(O4)COC5C(C(C(C(O5)COC6C(C(C(C(O6)CO)OC7C(C(C(C(O7)CO)O)O)O)O)NC(=O)C)O)O)O)O)OC8C(C(C(C(O8)CO)OC9C(C(C(C(O9)CO)OC1C(C(C(C(O1)CO)O)O)O)O)NC(=O)C)O)O)O)O)NC(=O)C)O)O)O", "trg": "This molecule is an amino sugar."}
+{"src": "CC1(CCC2(CCC3(C(=C2C1)C=CC4C3(CCC5C4(CCC(C5(C)CO)O)C)C)C)CO)C", "trg": "This molecule is a natural product found in Scrophularia smithii with data available."}
+{"src": "C1=CC(=C(C(=C1)Cl)NC2=C(C=C(C=C2)O)CC(=O)O)Cl", "trg": "This molecule is a natural product found in Bos taurus with data available."}
+{"src": "C1CCN2CC3CC(C2C1)C(=O)N4C3=CCCC4", "trg": "This molecule is a natural product found in Castilleja septentrionalis, Castilleja sulphurea, and other organisms with data available."}
+{"src": "CC1C(N=C(S1)C2=CC=CC=C2O)CO", "trg": "This molecule is a natural product found in Streptomyces with data available."}
+{"src": "COC1=CC23CCCN2CCC4=CC5=C(C=C4C3C1OC(=O)C(CC6=CC=CC=C6)(CC(=O)OC)O)OCO5", "trg": "This molecule is a natural product found in Cephalotaxus harringtonia with data available."}
+{"src": "CC1=CCCC(=C)C(CCC(=CCC2C(C1)OC(=O)C2=C)CO)O", "trg": "This molecule is a natural product found in Lobophytum crassum with data available."}
+{"src": "CC1(CC=C2C1CC3C(CC2(C)O)OC(=O)C3=C)O", "trg": "This molecule is a natural product found in Carpesium faberi with data available."}
+{"src": "CCCCC(C)C(=O)C(CC(C)CC(CCCCC(CC(C(C)NC(=O)C)O)O)O)OC(=O)CC(CC(=O)C)C(=O)O", "trg": "This molecule is a natural product found in Fusarium proliferatum with data available."}
+{"src": "C1CN(CCN1C2=CC=C(C=C2)F)C(CNC(=O)C3=CC(=CC=C3)Cl)C4=CN=CC=C4", "trg": "This molecule is a member of piperazines."}
+{"src": "CC(C)C1C(C(=O)C2C1(CCC3(CCC(C(=C3C2=O)C(=O)O)O)C)C)O", "trg": "This molecule is a natural product found in Parasola plicatilis with data available."}
+{"src": "CC(=O)NC1C(C(C(OC1O)CO)OC2C(C(C(C(O2)CO)OC3C(C(C(C(O3)COC4C(C(C(C(O4)CO)O)O)OC5C(C(C(C(O5)CO)OC6C(C(C(C(O6)CO)O)OC7C(C(C(C(O7)CO)O)O)O)O)O)NC(=O)C)O)OC8C(C(C(C(O8)CO)OC9C(C(C(C(O9)CO)O)O)NC(=O)C)O)OC1C(C(C(C(O1)CO)OC1C(C(C(C(O1)CO)O)OC1C(C(C(C(O1)CO)O)O)O)O)O)NC(=O)C)O)O)NC(=O)C)O", "trg": "This molecule is a polysaccharide."}
+{"src": "CC1=C(C(CCC1)(C)C)C=CC(=CC=CC(=CC=CC=C(C)C=CC=C(C)C=CC2C(=C)CCCC2(C)C)C)C", "trg": "This molecule is a natural product found in Coccinella septempunctata with data available."}
+{"src": "CC(C)(COP(=O)(O)OP(=O)(O)OCC1C(C(C(O1)N2C=NC3=C(N=CN=C32)N)O)OP(=O)(O)O)C(C(=O)NCCC(=O)NCCSC(=O)C=CCCCCCCCCCCCCC(=O)O)O", "trg": "This molecule is an acyl-CoA resulting from the formal condensation of the thiol group of coenzyme A with the 1-carboxy group of (2E)-hexadecenedioic acid. It is functionally related to a hexadecanedioic acid. It is a conjugate acid of a This molecule(5-)."}
+{"src": "CCCCCCCCCCCCCCCCC1(CCC2=C(O1)C(=C(C(=C2C)OC(=O)CCCCCCCCCCCCC)C)C)C", "trg": "This molecule is a natural product found in Platanus orientalis with data available."}
+{"src": "CC=C(C)C(=O)OC1CC(C(=O)CCC(=CC2C1C(=C)C(=O)O2)C)(C)O", "trg": "This molecule is a natural product found in Bejaranoa semistriata with data available."}
+{"src": "CC(C)C(=O)OC1C2(C3CC(C4(C(C3(CO1)C(CC2OC(=O)C)O)C(=O)CC5(C46C(O6)CC5C7=COC=C7)C)C)O)C", "trg": "This molecule is a natural product found in Melia azedarach with data available."}
+{"src": "COC(=O)C1=COC(C2C1C(C=C2COC(=O)C3=CC=CC=C3)O)OC4C(C(C(C(O4)CO)O)O)O", "trg": "This molecule is a natural product found in Daphniphyllum angustifolium and Oldenlandia corymbosa with data available."}
+{"src": "CC1CC2=CC(=C(C(=C2C(=O)O1)O)CC(C(C)(C)O)OC(=O)C)OC", "trg": "This molecule is a 2-benzopyran."}
+{"src": "C1C2C(C(S1)C(=O)O)NC(=O)N2", "trg": "This molecule is a member of the class of thienoimidazoles that is 2-oxohexahydrothieno[3,4-d]imidazole carrying an additional carboxy group at position 4 (the 3aS,4R,6aR-diastereomer). It is an azabicycloalkane, a monocarboxylic acid, a thienoimidazole, a thiabicycloalkane and a member of ureas."}
+{"src": "COC1=CC2=C(C(=C1)OC3C(C(C(C(O3)COC4C(C(C(CO4)O)O)O)O)O)O)C(=O)C5=C(O2)C=CC(=C5OC)O", "trg": "This molecule is a natural product found in Gentiana acaulis and Gentianopsis paludosa with data available."}
+{"src": "CCCN(CC#C)C1CCC2=C(C1)C(=CC=C2)O", "trg": "This molecule is a member of tetralins."}
+{"src": "C1=CC(=CC(=C1)Cl)N=C(N)N=C(N)N", "trg": "This molecule is a member of monochlorobenzenes and a member of biguanides."}
+{"src": "C1COCCN1CC(=O)N2C3CN(C4=CC=CC=C4C3C2CO)C(=O)C5=CN=CC=C5", "trg": "This molecule is a member of quinolines."}
+{"src": "C1[C@H](NC(=O)NC1=O)C(=O)O", "trg": "This molecule is the (S)-enantiomer of dihydroorotic acid that is an intermediate in the metabolism of pyridine. It has a role as a Saccharomyces cerevisiae metabolite, a human metabolite, an Escherichia coli metabolite and a mouse metabolite. It is a conjugate acid of a (S)-dihydroorotate. It is an enantiomer of a (R)-dihydroorotic acid."}
+{"src": "CC(C(C(C)OC(=O)C(C(C)O)NC(=O)C1=C(C(=CC=C1)NC=O)O)OC(=O)CC2=CC=CC=C2)C(=O)O", "trg": "This molecule is a natural product found in Streptomyces lusitanus with data available."}
+{"src": "CC1CC(=O)CC(C1C(C)(CCC(C)OC2C(C(C(C(O2)CO)O)O)O)CCC(=O)C(=C(C)CCC(C)OC3C(C(C(C(O3)CO)O)O)O)C)(C)C", "trg": "This molecule is a natural product found in Stenochlaena palustris with data available."}
+{"src": "CC1C(C(C(C(O1)OC2C(C(COC2OC(=O)C34CCC(CC3C5=CCC6C(C5(CC4)C)(CCC7C6(CC(C(C7(C)CO)OC8C(C(C(C(O8)CO)O)OC9C(C(C(CO9)O)O)O)O)O)C)C)(C)C)O)O)O)OC1C(C(CO1)(CO)O)O)OC1C(C(C(CO1)O)O)O", "trg": "This molecule is a natural product found in Eschenbachia blinii with data available."}
+{"src": "C([C@@H]1[C@H]([C@@H]([C@H]([C@@H](O1)OC(CO)CO)O)O)O)O", "trg": "This molecule is a natural product found in Arabidopsis thaliana and Brassica napus with data available."}
+{"src": "CC1=CC=C(C=C1)C=CC(=O)C2=C(C=C(C=C2OC)OC)OC", "trg": "This molecule is an aromatic compound."}
+{"src": "CN(C)C1=CC2=C(C=C1)OC3C2CC(OC3CO)CC(=O)NCC4=CC=CC=C4OC", "trg": "This molecule is a furopyran."}
+{"src": "CC(=O)OC1C2C3C4(O3)C(CCC5(C4CC(=O)OC5C6=COC=C6)C)C(C2=O)(C(C1(C)C)CC(=O)OC)C", "trg": "This molecule is a natural product found in Xylocarpus granatum with data available."}
+{"src": "CC(CCC=O)C1CCC2(C1(CCC34C2CCC5C3(C4)CCC(C5(C)C)O)C)C", "trg": "This molecule is a natural product found in Euphorbia portlandica with data available."}
+{"src": "CC1CC(C(OC1CC(=O)C2=CC=C(C=C2)N)C(C)C(=O)O)C", "trg": "This molecule is a natural product found in Streptomyces with data available."}
+{"src": "CCCCCC1=CC(=C(C(=C1C2C(C(C(C(O2)C)O)O)O)O)CCCC)O", "trg": "This molecule is a natural product found in Gaeumannomyces with data available."}
+{"src": "CC(=C)C1CCC2=C3C1OC(=O)C3=CC(=C2)O", "trg": "This molecule is a natural product found in Ligularia fischeri, Ligularia przewalskii, and other organisms with data available."}
+{"src": "CC=C(C)C(=O)OC1C(C2(C(CC1(C)C)C3=CCC4C5(CCC(C(C5CCC4(C3(C(C2O)O)C)C)(C)C)OC6C(C(C(C(O6)COC7C(C(C(C(O7)CO)O)O)O)O)O)OC8C(C(C(O8)CO)O)O)C)CO)OC(=O)C(=CC)C", "trg": "This molecule is a natural product found in Xanthoceras sorbifolium with data available."}
+{"src": "CC1C(C(C(C(O1)OCC2C(C(C(C(O2)O)NC(=O)C)O)OC3C(C(C(C(O3)CO)OC4C(C(C(C(O4)COC5C(C(C(C(O5)COC6C(C(C(C(O6)CO)OC7C(C(C(C(O7)CO)O)O)NC(=O)C)O)NC(=O)C)O)O)OC8C(C(C(C(O8)CO)OC9C(C(C(C(O9)CO)O)O)O)O)NC(=O)C)O)OC1C(C(C(C(O1)CO)O)O)OC1C(C(C(C(O1)CO)OC1C(C(C(C(O1)CO)O)O)NC(=O)C)O)NC(=O)C)O)O)NC(=O)C)O)O)O", "trg": "This molecule is a member of carbohydrates and carbohydrate derivatives."}
+{"src": "CCCCCCCC=CCCCCCCCCC(=O)[O-]", "trg": "This molecule is an octadecenoate that is the conjugate base of (10E)-octadecenoic acid, obtained by deprotonation of the carboxy group; major species at pH 7.3. It is a conjugate base of a (10E)-octadecenoic acid."}
+{"src": "CCCC=CC(=O)CC", "trg": "This molecule is a natural product found in Origanum sipyleum, Platostoma africanum, and Arctostaphylos uva-ursi with data available."}
+{"src": "COC1=C(C(=C2C(=C1)OC(=C(C2=O)O)C3=CC(=C(C=C3)OC4C(C(C(C(O4)CO)O)O)O)O)O)O", "trg": "This molecule is a natural product found in Paepalanthus latipes with data available."}

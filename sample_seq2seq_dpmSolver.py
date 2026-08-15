@@ -69,7 +69,7 @@ def resolve_checkpoint(model_dir, time_schedule_path):
 
 
 def create_argparser():
-    defaults = dict(model_dir='', step=0, out_dir='', top_p=0.0, rejection_rate=0.0, note='none', time_schedule_path='', save_trajectories=False,
+    defaults = dict(model_path='', model_dir='', step=0, out_dir='', top_p=0.0, rejection_rate=0.0, note='none', time_schedule_path='', save_trajectories=False,
                      timing_csv='benchmark_timing.csv', repeat_idx=0)  # BENCHMARK: new CLI args
     decode_defaults = dict(split='valid', clamp_step=0, seed2=105, clip_denoised=False, start_n=0)
     defaults.update(load_defaults_config())
@@ -87,10 +87,11 @@ def create_argparser():
 @th.no_grad()
 def main():
     args = create_argparser().parse_args()
-    args.model_path = resolve_checkpoint(
-    args.model_dir,
-    args.time_schedule_path
-    )
+    if not args.model_path:
+        args.model_path = resolve_checkpoint(
+            args.model_dir,
+            args.time_schedule_path
+        )
     dist_util.setup_dist()
     logger.configure()
     
@@ -296,13 +297,23 @@ def main():
     #   This round-trip is exact. The solver's correcting_x0_fn hook fires on the
     #   recovered pred_x0, which is the correct place to apply denoised_fn_round.
     model_kwargs = {}
-    model_fn = model_wrapper(
+    original_model_fn = model_wrapper(
         model,
         noise_schedule,
         model_type="x_start",  # model returns pred_x0
         model_kwargs=model_kwargs,
         guidance_type="uncond",
     )
+
+    # Wrap model_fn to keep track of steps picked by the solver
+    queried_steps = []
+    def logging_model_fn(x, t_continuous):
+        t_val = t_continuous.mean().item() if hasattr(t_continuous, "mean") else float(t_continuous)
+        N = noise_schedule.total_N
+        discrete_step = int(round(t_val * N)) - 1
+        discrete_step = max(0, min(N - 1, discrete_step))
+        queried_steps.append((t_val, discrete_step))
+        return original_model_fn(x, t_continuous)
 
     # correcting_x0_fn is called by DPM_Solver.data_prediction_fn() on the recovered
     # pred_x0 at every model evaluation -- exactly where denoised_fn_round must run.
@@ -311,7 +322,7 @@ def main():
         return rounded_x0
 
     dpm_solver = DPM_Solver(
-        model_fn,
+        logging_model_fn,
         noise_schedule,
         algorithm_type="dpmsolver++",
         correcting_x0_fn=rounding_corrector,
@@ -338,6 +349,8 @@ def main():
         # Clear trajectories for the current batch
         samples_traj.clear()
         pred_xstart_traj.clear()        
+        # Clear steps logged from previous batches
+        queried_steps.clear()
         ## You can use steps = 10, 12, 15, 20, 25, 50, 100.
         ## Empirically, we find that steps in [10, 20] can generate quite good samples.
         ## And steps = 20 can almost converge.
@@ -346,20 +359,29 @@ def main():
         # AND after is required -- CUDA kernel launches are async, so a bare
         # time.time() around an unsynchronized call mostly measures launch
         # overhead, not actual GPU compute time.
-        th.cuda.synchronize()
+        if th.cuda.is_available():
+            th.cuda.synchronize()
         t0 = time.time()
-        with autocast():
+        with autocast(enabled=th.cuda.is_available()):
             x_sample = dpm_solver.sample(
                 x_noised,
                 steps=SOLVER_STEP,
                 order=2,
                 skip_type="time_uniform",
-                method="multistep",
+                method=args.method,
+                atol=args.atol,
+                rtol=args.rtol,
                 input_ids_mask=input_ids_mask,
                 x_start=x_start,
             )
-        th.cuda.synchronize()
+        if th.cuda.is_available():
+            th.cuda.synchronize()
         elapsed = time.time() - t0
+
+        if rank == 0:
+            unique_steps = sorted(list(set(step for _, step in queried_steps)), reverse=True)
+            logger.log(f"### [DPM-Solver Evaluation Sequence (Discrete Steps)]: {[step for _, step in queried_steps]}")
+            logger.log(f"### [DPM-Solver Unique Steps]: {unique_steps}")
 
         if rank == 0:
             append_timing_row(args.timing_csv, {
@@ -391,7 +413,7 @@ def main():
 
 
         arr = np.concatenate(all_sentence, axis=0)
-        x_t = th.tensor(arr).cuda()
+        x_t = th.tensor(arr).to(dist_util.dev())
         # print('decoding for seq2seq', )
         # print(arr.shape)
 

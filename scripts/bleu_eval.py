@@ -1,11 +1,17 @@
+import os
+import sys
+import glob
 import json
+import re
+import argparse
+import numpy as np
 import nltk
 from nltk.translate.bleu_score import corpus_bleu, SmoothingFunction
 
-def calculate_bleu_from_jsonl(file_path):
+def compute_bleu_single_file(file_path):
     data = []
     
-    # Read and parse the JSONL file
+    # Read and parse the JSON / JSONL file
     try:
         with open(file_path, 'r', encoding='utf-8') as f:
             for line in f:
@@ -13,137 +19,124 @@ def calculate_bleu_from_jsonl(file_path):
                     data.append(json.loads(line))
     except FileNotFoundError:
         print(f"Error: The file '{file_path}' was not found.")
-        return
+        return None
     except json.JSONDecodeError as e:
-        print(f"Error parsing JSON: {e}")
-        return
+        print(f"Error parsing JSON in '{file_path}': {e}")
+        return None
 
     # Prepare tokenized references and candidates
-    # NLTK expects: 
-    # references: list of list of lists of tokens (multiple references per candidate)
-    # candidates: list of list of tokens
     references_tokenized = [[item["reference"].split()] for item in data if "reference" in item]
     candidates_tokenized = [item["recover"].split() for item in data if "recover" in item]
 
     if not references_tokenized or not candidates_tokenized:
-        print("No valid data found in the file.")
-        return
+        print(f"No valid reference/recover data found in '{file_path}'.")
+        return None
 
     # Calculate Standard BLEU-4
     standard_score = corpus_bleu(references_tokenized, candidates_tokenized)
     
-    # Calculate Smoothed BLEU-4 (better for small datasets or zero n-gram overlaps)
+    # Calculate Smoothed BLEU-4
     smoothie = SmoothingFunction().method1
     smoothed_score = corpus_bleu(references_tokenized, candidates_tokenized, smoothing_function=smoothie)
 
-    print(f"--- Results for {file_path} ---")
-    print(f"Total sequences processed: {len(data)}")
-    print(f"Standard Corpus BLEU-4: {standard_score:.4f}")
-    print(f"Smoothed Corpus BLEU-4: {smoothed_score:.4f}")
+    return {
+        "file_path": file_path,
+        "num_samples": len(data),
+        "standard_bleu": standard_score,
+        "smoothed_bleu": smoothed_score
+    }
 
-# Run the function
+def find_seed_files(file_path):
+    """
+    Given a file path, finds all matching files in the same directory that share
+    the same name structure but have different random seed numbers (e.g. seed123, seed101).
+    """
+    if '*' in file_path or '?' in file_path:
+        matched = sorted(glob.glob(file_path))
+        if matched:
+            return matched
+
+    dirname = os.path.dirname(file_path) or '.'
+    basename = os.path.basename(file_path)
+
+    # Match seed<digits> pattern in basename
+    seed_match = re.search(r'seed\d+', basename)
+    if seed_match:
+        prefix = basename[:seed_match.start()]
+        suffix = basename[seed_match.end():]
+        base_suffix = re.sub(r'\.jsonl?$', '', suffix)
+        pattern = re.compile(rf"^{re.escape(prefix)}seed\d+{re.escape(base_suffix)}\.jsonl?$")
+
+        try:
+            candidates = os.listdir(dirname)
+        except OSError:
+            candidates = []
+
+        matched_files = [
+            os.path.join(dirname, f) for f in sorted(candidates) if pattern.match(f)
+        ]
+        if matched_files:
+            return matched_files
+
+    if os.path.exists(file_path):
+        return [file_path]
+    
+    return []
+
+def calculate_bleu_from_jsonl(file_path):
+    matched_files = find_seed_files(file_path)
+    if not matched_files:
+        print(f"Error: No matching seed files found for path '{file_path}'.")
+        return None
+
+    results = []
+    for fp in matched_files:
+        res = compute_bleu_single_file(fp)
+        if res is not None:
+            results.append(res)
+
+    if not results:
+        print("No valid evaluation results obtained.")
+        return None
+
+    std_scores = [r["standard_bleu"] for r in results]
+    smooth_scores = [r["smoothed_bleu"] for r in results]
+
+    mean_std = float(np.mean(std_scores))
+    sd_std = float(np.std(std_scores, ddof=1)) if len(std_scores) > 1 else 0.0
+
+    mean_smooth = float(np.mean(smooth_scores))
+    sd_smooth = float(np.std(smooth_scores, ddof=1)) if len(smooth_scores) > 1 else 0.0
+
+    print(f"\n{'='*65}")
+    print(f"BLEU-4 Evaluation Summary across {len(results)} seed file(s):")
+    print(f"{'='*65}")
+    for r in results:
+        fname = os.path.basename(r['file_path'])
+        print(f"  - {fname}: Standard BLEU-4 = {r['standard_bleu']:.4f}, Smoothed BLEU-4 = {r['smoothed_bleu']:.4f} ({r['num_samples']} samples)")
+    print(f"{'-'*65}")
+    print(f"Standard Corpus BLEU-4: {mean_std:.4f} +/- {sd_std:.4f} (mean +/- sd)")
+    print(f"Smoothed Corpus BLEU-4: {mean_smooth:.4f} +/- {sd_smooth:.4f} (mean +/- sd)")
+    print(f"{'='*65}\n")
+
+    return {
+        "mean_standard": mean_std,
+        "sd_standard": sd_std,
+        "mean_smoothed": mean_smooth,
+        "sd_smoothed": sd_smooth,
+        "individual_results": results
+    }
+
 if __name__ == "__main__":
-    # calculate_bleu_from_jsonl('../generation_outputs/diffuseq_iwslt14_mol_h128_lr0.0001_t2000_sqrt_lossaware_seed102_learned_mask_fp16_denoise_0.5_reproduce20260410-16:01:15/ema_0.9999_150000.pt.samples/seed110_solverstep10_none.json') # 10steps
-    # 2000 Steps Bleu Eval on Mol data
-    # calculate_bleu_from_jsonl('../generation_outputs/diffuseq_iwslt14_mol_h128_lr0.0001_t2000_sqrt_lossaware_seed102_mol_timing_probe20260529-12:06:01/ema_0.9999_020000.pt.samples/seed101_step0_none.json')
-    # 10 steps mol data
-    # calculate_bleu_from_jsonl('../generation_outputs/diffuseq_iwslt14_mol_h128_lr0.0001_t2000_sqrt_lossaware_seed102_mol_timing_probe20260529-12:06:01/ema_0.9999_020000.pt.samples/seed124_solverstep10_none.json')
-    # 2 steps mol data
-    # generation_outputs/diffuseq_iwslt14_mol_h128_lr0.0001_t2000_sqrt_lossaware_seed102_smiles_caption_dual20260604-12:00:49/ema_0.9999_050000.pt.samples/seed123_step0_none.json
-    # calculate_bleu_from_jsonl('../generation_outputs/diffuseq_iwslt14_mol_h128_lr0.0001_t2000_sqrt_lossaware_seed102_smiles_caption_dual20260604-12:00:49/ema_0.9999_010000.pt.samples/seed123_step0_eval_500samples_fixed.json')
-    # calculate_bleu_from_jsonl('../generation_outputs/diffuseq_iwslt14_mol_h128_lr0.0001_t2000_sqrt_lossaware_seed102_smiles_caption_dual20260604-12:00:49/ema_0.9999_020000.pt.samples/seed123_step0_eval_500samples_fixed.json')
-    # calculate_bleu_from_jsonl('../generation_outputs/diffuseq_iwslt14_mol_h128_lr0.0001_t2000_sqrt_lossaware_seed102_smiles_caption_dual20260604-12:00:49/ema_0.9999_030000.pt.samples/seed123_step0_eval_500samples_fixed.json')
-    # calculate_bleu_from_jsonl('../generation_outputs/diffuseq_iwslt14_mol_h128_lr0.0001_t2000_sqrt_lossaware_seed102_smiles_caption_dual20260604-12:00:49/ema_0.9999_040000.pt.samples/seed123_step0_eval_500samples_fixed.json')
-    # calculate_bleu_from_jsonl('../generation_outputs/diffuseq_iwslt14_mol_h128_lr0.0001_t2000_sqrt_lossaware_seed102_smiles_caption_dual20260604-12:00:49/ema_0.9999_050000.pt.samples/seed123_step0_eval_500samples_fixed.json')
-    
-    #0.5787
-    # calculate_bleu_from_jsonl('../generation_outputs/diffuseq_iwslt14_mol_h128_lr0.0001_t2000_sqrt_lossaware_seed102_adanoise_60k_110kckpts_10kstride20260614-18:54:53/ema_0.9999_069000.pt.samples/seed123_step0_adanoise_10kstride_60k_110k_ckpts_40kalpha.json')
-    # calculate_bleu_from_jsonl('../generation_outputs/diffuseq_iwslt14_mol_h128_lr0.0001_t2000_sqrt_lossaware_seed102_adanoise_60k_110kckpts_10kstride20260614-18:54:53/ema_0.9999_079000.pt.samples/seed123_step0_adanoise_10kstride_60k_110k_ckpts_40kalpha.json')
-    # calculate_bleu_from_jsonl('../generation_outputs/diffuseq_iwslt14_mol_h128_lr0.0001_t2000_sqrt_lossaware_seed102_adanoise_60k_110kckpts_10kstride20260614-18:54:53/ema_0.9999_089000.pt.samples/seed123_step0_adanoise_10kstride_60k_110k_ckpts_40kalpha.json')
-    # calculate_bleu_from_jsonl('../generation_outputs/diffuseq_iwslt14_mol_h128_lr0.0001_t2000_sqrt_lossaware_seed102_adanoise_60k_110kckpts_10kstride20260614-18:54:53/ema_0.9999_099000.pt.samples/seed123_step0_adanoise_10kstride_60k_110k_ckpts_40kalpha.json')
-    # calculate_bleu_from_jsonl('../generation_outputs/diffuseq_iwslt14_mol_h128_lr0.0001_t2000_sqrt_lossaware_seed102_adanoise_60k_110kckpts_10kstride20260614-18:54:53/ema_0.9999_109000.pt.samples/seed123_step0_adanoise_10kstride_60k_110k_ckpts_40kalpha.json')
+    parser = argparse.ArgumentParser(description="Calculate mean +/- sd BLEU-4 score across seed files.")
+    parser.add_argument("path", type=str, nargs="?", default=None, help="Path to a seed json/jsonl file or pattern")
+    parser.add_argument("--path", type=str, dest="path_opt", default=None, help="Path to a seed json/jsonl file or pattern")
+    args = parser.parse_args()
 
-    # calculate_bleu_from_jsonl('../generation_outputs/diffuseq_iwslt14_mol_h128_lr0.0001_t2000_sqrt_lossaware_seed102_adan_10kstride_ckpt109k20260704-02:48:53/ema_0.9999_119000.pt.samples/seed123_step0_adanoise_149k_50knpy.json')
-    # calculate_bleu_from_jsonl('../generation_outputs/diffuseq_iwslt14_mol_h128_lr0.0001_t2000_sqrt_lossaware_seed102_adan_10kstride_ckpt109k20260704-02:48:53/ema_0.9999_129000.pt.samples/seed123_step0_adanoise_149k_50knpy.json')
-    # calculate_bleu_from_jsonl('../generation_outputs/diffuseq_iwslt14_mol_h128_lr0.0001_t2000_sqrt_lossaware_seed102_adan_10kstride_ckpt109k20260704-02:48:53/ema_0.9999_139000.pt.samples/seed123_step0_adanoise_149k_50knpy.json')
-    
-    #0.5801 - 189k cpkt with 190k.npy
-    # calculate_bleu_from_jsonl('../generation_outputs/diffuseq_iwslt14_mol_h128_lr0.0001_t2000_sqrt_lossaware_seed102_seq128_adan_0707_ckpt109k20260707-12:57:50/ema_0.9999_109000.pt.samples/seed123_step0_adanoise_110_200k_190knpy.json')
-    # calculate_bleu_from_jsonl('../generation_outputs/diffuseq_iwslt14_mol_h128_lr0.0001_t2000_sqrt_lossaware_seed102_seq128_adan_0707_ckpt109k20260707-12:57:50/ema_0.9999_119000.pt.samples/seed123_step0_adanoise_110_200k_190knpy.json')
-    # calculate_bleu_from_jsonl('../generation_outputs/diffuseq_iwslt14_mol_h128_lr0.0001_t2000_sqrt_lossaware_seed102_seq128_adan_0707_ckpt109k20260707-12:57:50/ema_0.9999_129000.pt.samples/seed123_step0_adanoise_110_200k_190knpy.json')
-    # calculate_bleu_from_jsonl('../generation_outputs/diffuseq_iwslt14_mol_h128_lr0.0001_t2000_sqrt_lossaware_seed102_seq128_adan_0707_ckpt109k20260707-12:57:50/ema_0.9999_139000.pt.samples/seed123_step0_adanoise_110_200k_190knpy.json')
-    # calculate_bleu_from_jsonl('../generation_outputs/diffuseq_iwslt14_mol_h128_lr0.0001_t2000_sqrt_lossaware_seed102_seq128_adan_0707_ckpt109k20260707-12:57:50/ema_0.9999_149000.pt.samples/seed123_step0_adanoise_110_200k_190knpy.json')
-    # calculate_bleu_from_jsonl('../generation_outputs/diffuseq_iwslt14_mol_h128_lr0.0001_t2000_sqrt_lossaware_seed102_seq128_adan_0707_ckpt109k20260707-12:57:50/ema_0.9999_159000.pt.samples/seed123_step0_adanoise_110_200k_190knpy.json')
-    # calculate_bleu_from_jsonl('../generation_outputs/diffuseq_iwslt14_mol_h128_lr0.0001_t2000_sqrt_lossaware_seed102_seq128_adan_0707_ckpt109k20260707-12:57:50/ema_0.9999_169000.pt.samples/seed123_step0_adanoise_110_200k_190knpy.json')
-    # calculate_bleu_from_jsonl('../generation_outputs/diffuseq_iwslt14_mol_h128_lr0.0001_t2000_sqrt_lossaware_seed102_seq128_adan_0707_ckpt109k20260707-12:57:50/ema_0.9999_179000.pt.samples/seed123_step0_adanoise_110_200k_190knpy.json')
-    # calculate_bleu_from_jsonl('../generation_outputs/diffuseq_iwslt14_mol_h128_lr0.0001_t2000_sqrt_lossaware_seed102_seq128_adan_0707_ckpt109k20260707-12:57:50/ema_0.9999_189000.pt.samples/seed123_step0_adanoise_110_200k_190knpy.json')
-    # calculate_bleu_from_jsonl('../generation_outputs/diffuseq_iwslt14_mol_h128_lr0.0001_t2000_sqrt_lossaware_seed102_seq128_adan_0707_ckpt109k20260707-12:57:50/ema_0.9999_199000.pt.samples/seed123_step0_adanoise_110_200k_190knpy.json')
-    # calculate_bleu_from_jsonl('../generation_outputs/diffuseq_iwslt14_mol_h128_lr0.0001_t2000_sqrt_lossaware_seed102_seq128_adan_0707_ckpt109k20260707-12:57:50/ema_0.9999_200000.pt.samples/seed123_step0_adanoise_110_200k_190knpy.json')
-
-    #0.5864 - 189k ckpt with 180.npy
-    # calculate_bleu_from_jsonl('../generation_outputs/diffuseq_iwslt14_mol_h128_lr0.0001_t2000_sqrt_lossaware_seed102_seq128_adan_0707_ckpt109k20260707-12:57:50/ema_0.9999_109000.pt.samples/seed123_step0_adanoise_110_200k_180knpy.json')
-    # calculate_bleu_from_jsonl('../generation_outputs/diffuseq_iwslt14_mol_h128_lr0.0001_t2000_sqrt_lossaware_seed102_seq128_adan_0707_ckpt109k20260707-12:57:50/ema_0.9999_119000.pt.samples/seed123_step0_adanoise_110_200k_180knpy.json')
-    # calculate_bleu_from_jsonl('../generation_outputs/diffuseq_iwslt14_mol_h128_lr0.0001_t2000_sqrt_lossaware_seed102_seq128_adan_0707_ckpt109k20260707-12:57:50/ema_0.9999_129000.pt.samples/seed123_step0_adanoise_110_200k_180knpy.json')
-    # calculate_bleu_from_jsonl('../generation_outputs/diffuseq_iwslt14_mol_h128_lr0.0001_t2000_sqrt_lossaware_seed102_seq128_adan_0707_ckpt109k20260707-12:57:50/ema_0.9999_139000.pt.samples/seed123_step0_adanoise_110_200k_180knpy.json')
-    # calculate_bleu_from_jsonl('../generation_outputs/diffuseq_iwslt14_mol_h128_lr0.0001_t2000_sqrt_lossaware_seed102_seq128_adan_0707_ckpt109k20260707-12:57:50/ema_0.9999_149000.pt.samples/seed123_step0_adanoise_110_200k_180knpy.json')
-    # calculate_bleu_from_jsonl('../generation_outputs/diffuseq_iwslt14_mol_h128_lr0.0001_t2000_sqrt_lossaware_seed102_seq128_adan_0707_ckpt109k20260707-12:57:50/ema_0.9999_159000.pt.samples/seed123_step0_adanoise_110_200k_180knpy.json')
-    # calculate_bleu_from_jsonl('../generation_outputs/diffuseq_iwslt14_mol_h128_lr0.0001_t2000_sqrt_lossaware_seed102_seq128_adan_0707_ckpt109k20260707-12:57:50/ema_0.9999_169000.pt.samples/seed123_step0_adanoise_110_200k_180knpy.json')
-    # calculate_bleu_from_jsonl('../generation_outputs/diffuseq_iwslt14_mol_h128_lr0.0001_t2000_sqrt_lossaware_seed102_seq128_adan_0707_ckpt109k20260707-12:57:50/ema_0.9999_179000.pt.samples/seed123_step0_adanoise_110_200k_180knpy.json')
-    # calculate_bleu_from_jsonl('../generation_outputs/diffuseq_iwslt14_mol_h128_lr0.0001_t2000_sqrt_lossaware_seed102_seq128_adan_0707_ckpt109k20260707-12:57:50/ema_0.9999_189000.pt.samples/seed123_step0_adanoise_110_200k_180knpy.json')
-    # calculate_bleu_from_jsonl('../generation_outputs/diffuseq_iwslt14_mol_h128_lr0.0001_t2000_sqrt_lossaware_seed102_seq128_adan_0707_ckpt109k20260707-12:57:50/ema_0.9999_199000.pt.samples/seed123_step0_adanoise_110_200k_180knpy.json')
-    # calculate_bleu_from_jsonl('../generation_outputs/diffuseq_iwslt14_mol_h128_lr0.0001_t2000_sqrt_lossaware_seed102_seq128_adan_0707_ckpt109k20260707-12:57:50/ema_0.9999_200000.pt.samples/seed123_step0_adanoise_110_200k_180knpy.json')
-    
-    #0.5656 - 189k ckpt with 170.npy
-    # calculate_bleu_from_jsonl('../generation_outputs/diffuseq_iwslt14_mol_h128_lr0.0001_t2000_sqrt_lossaware_seed102_seq128_adan_0707_ckpt109k20260707-12:57:50/ema_0.9999_109000.pt.samples/seed123_step0_adanoise_110_200k_170knpy.json')
-    # calculate_bleu_from_jsonl('../generation_outputs/diffuseq_iwslt14_mol_h128_lr0.0001_t2000_sqrt_lossaware_seed102_seq128_adan_0707_ckpt109k20260707-12:57:50/ema_0.9999_119000.pt.samples/seed123_step0_adanoise_110_200k_170knpy.json')
-    # calculate_bleu_from_jsonl('../generation_outputs/diffuseq_iwslt14_mol_h128_lr0.0001_t2000_sqrt_lossaware_seed102_seq128_adan_0707_ckpt109k20260707-12:57:50/ema_0.9999_129000.pt.samples/seed123_step0_adanoise_110_200k_170knpy.json')
-    # calculate_bleu_from_jsonl('../generation_outputs/diffuseq_iwslt14_mol_h128_lr0.0001_t2000_sqrt_lossaware_seed102_seq128_adan_0707_ckpt109k20260707-12:57:50/ema_0.9999_139000.pt.samples/seed123_step0_adanoise_110_200k_170knpy.json')
-    # calculate_bleu_from_jsonl('../generation_outputs/diffuseq_iwslt14_mol_h128_lr0.0001_t2000_sqrt_lossaware_seed102_seq128_adan_0707_ckpt109k20260707-12:57:50/ema_0.9999_149000.pt.samples/seed123_step0_adanoise_110_200k_170knpy.json')
-    # calculate_bleu_from_jsonl('../generation_outputs/diffuseq_iwslt14_mol_h128_lr0.0001_t2000_sqrt_lossaware_seed102_seq128_adan_0707_ckpt109k20260707-12:57:50/ema_0.9999_159000.pt.samples/seed123_step0_adanoise_110_200k_170knpy.json')
-    # calculate_bleu_from_jsonl('../generation_outputs/diffuseq_iwslt14_mol_h128_lr0.0001_t2000_sqrt_lossaware_seed102_seq128_adan_0707_ckpt109k20260707-12:57:50/ema_0.9999_169000.pt.samples/seed123_step0_adanoise_110_200k_170knpy.json')
-    # calculate_bleu_from_jsonl('../generation_outputs/diffuseq_iwslt14_mol_h128_lr0.0001_t2000_sqrt_lossaware_seed102_seq128_adan_0707_ckpt109k20260707-12:57:50/ema_0.9999_179000.pt.samples/seed123_step0_adanoise_110_200k_170knpy.json')
-    # calculate_bleu_from_jsonl('../generation_outputs/diffuseq_iwslt14_mol_h128_lr0.0001_t2000_sqrt_lossaware_seed102_seq128_adan_0707_ckpt109k20260707-12:57:50/ema_0.9999_189000.pt.samples/seed123_step0_adanoise_110_200k_170knpy.json')
-    # calculate_bleu_from_jsonl('../generation_outputs/diffuseq_iwslt14_mol_h128_lr0.0001_t2000_sqrt_lossaware_seed102_seq128_adan_0707_ckpt109k20260707-12:57:50/ema_0.9999_199000.pt.samples/seed123_step0_adanoise_110_200k_170knpy.json')
-    # calculate_bleu_from_jsonl('../generation_outputs/diffuseq_iwslt14_mol_h128_lr0.0001_t2000_sqrt_lossaware_seed102_seq128_adan_0707_ckpt109k20260707-12:57:50/ema_0.9999_200000.pt.samples/seed123_step0_adanoise_110_200k_170knpy.json')
-
-    #0.5756 - 199k ckpt with 160.npy
-    # calculate_bleu_from_jsonl('../generation_outputs/diffuseq_iwslt14_mol_h128_lr0.0001_t2000_sqrt_lossaware_seed102_seq128_adan_0707_ckpt109k20260707-12:57:50/ema_0.9999_109000.pt.samples/seed123_step0_adanoise_110_200k_160knpy.json')
-    # calculate_bleu_from_jsonl('../generation_outputs/diffuseq_iwslt14_mol_h128_lr0.0001_t2000_sqrt_lossaware_seed102_seq128_adan_0707_ckpt109k20260707-12:57:50/ema_0.9999_119000.pt.samples/seed123_step0_adanoise_110_200k_160knpy.json')
-    # calculate_bleu_from_jsonl('../generation_outputs/diffuseq_iwslt14_mol_h128_lr0.0001_t2000_sqrt_lossaware_seed102_seq128_adan_0707_ckpt109k20260707-12:57:50/ema_0.9999_129000.pt.samples/seed123_step0_adanoise_110_200k_160knpy.json')
-    # calculate_bleu_from_jsonl('../generation_outputs/diffuseq_iwslt14_mol_h128_lr0.0001_t2000_sqrt_lossaware_seed102_seq128_adan_0707_ckpt109k20260707-12:57:50/ema_0.9999_139000.pt.samples/seed123_step0_adanoise_110_200k_160knpy.json')
-    # calculate_bleu_from_jsonl('../generation_outputs/diffuseq_iwslt14_mol_h128_lr0.0001_t2000_sqrt_lossaware_seed102_seq128_adan_0707_ckpt109k20260707-12:57:50/ema_0.9999_149000.pt.samples/seed123_step0_adanoise_110_200k_160knpy.json')
-    # calculate_bleu_from_jsonl('../generation_outputs/diffuseq_iwslt14_mol_h128_lr0.0001_t2000_sqrt_lossaware_seed102_seq128_adan_0707_ckpt109k20260707-12:57:50/ema_0.9999_159000.pt.samples/seed123_step0_adanoise_110_200k_160knpy.json')
-    # calculate_bleu_from_jsonl('../generation_outputs/diffuseq_iwslt14_mol_h128_lr0.0001_t2000_sqrt_lossaware_seed102_seq128_adan_0707_ckpt109k20260707-12:57:50/ema_0.9999_169000.pt.samples/seed123_step0_adanoise_110_200k_160knpy.json')
-    # calculate_bleu_from_jsonl('../generation_outputs/diffuseq_iwslt14_mol_h128_lr0.0001_t2000_sqrt_lossaware_seed102_seq128_adan_0707_ckpt109k20260707-12:57:50/ema_0.9999_179000.pt.samples/seed123_step0_adanoise_110_200k_160knpy.json')
-    # calculate_bleu_from_jsonl('../generation_outputs/diffuseq_iwslt14_mol_h128_lr0.0001_t2000_sqrt_lossaware_seed102_seq128_adan_0707_ckpt109k20260707-12:57:50/ema_0.9999_189000.pt.samples/seed123_step0_adanoise_110_200k_160knpy.json')
-    # calculate_bleu_from_jsonl('../generation_outputs/diffuseq_iwslt14_mol_h128_lr0.0001_t2000_sqrt_lossaware_seed102_seq128_adan_0707_ckpt109k20260707-12:57:50/ema_0.9999_199000.pt.samples/seed123_step0_adanoise_110_200k_160knpy.json')
-    # calculate_bleu_from_jsonl('../generation_outputs/diffuseq_iwslt14_mol_h128_lr0.0001_t2000_sqrt_lossaware_seed102_seq128_adan_0707_ckpt109k20260707-12:57:50/ema_0.9999_200000.pt.samples/seed123_step0_adanoise_110_200k_160knpy.json')
-
-    #0.5781 - 189k ckpt with 150.npy
-    # calculate_bleu_from_jsonl('../generation_outputs/diffuseq_iwslt14_mol_h128_lr0.0001_t2000_sqrt_lossaware_seed102_seq128_adan_0707_ckpt109k20260707-12:57:50/ema_0.9999_109000.pt.samples/seed123_step0_adanoise_110_200k_150knpy.json')
-    # calculate_bleu_from_jsonl('../generation_outputs/diffuseq_iwslt14_mol_h128_lr0.0001_t2000_sqrt_lossaware_seed102_seq128_adan_0707_ckpt109k20260707-12:57:50/ema_0.9999_119000.pt.samples/seed123_step0_adanoise_110_200k_150knpy.json')
-    # calculate_bleu_from_jsonl('../generation_outputs/diffuseq_iwslt14_mol_h128_lr0.0001_t2000_sqrt_lossaware_seed102_seq128_adan_0707_ckpt109k20260707-12:57:50/ema_0.9999_129000.pt.samples/seed123_step0_adanoise_110_200k_150knpy.json')
-    # calculate_bleu_from_jsonl('../generation_outputs/diffuseq_iwslt14_mol_h128_lr0.0001_t2000_sqrt_lossaware_seed102_seq128_adan_0707_ckpt109k20260707-12:57:50/ema_0.9999_139000.pt.samples/seed123_step0_adanoise_110_200k_150knpy.json')
-    # calculate_bleu_from_jsonl('../generation_outputs/diffuseq_iwslt14_mol_h128_lr0.0001_t2000_sqrt_lossaware_seed102_seq128_adan_0707_ckpt109k20260707-12:57:50/ema_0.9999_149000.pt.samples/seed123_step0_adanoise_110_200k_150knpy.json')
-    # calculate_bleu_from_jsonl('../generation_outputs/diffuseq_iwslt14_mol_h128_lr0.0001_t2000_sqrt_lossaware_seed102_seq128_adan_0707_ckpt109k20260707-12:57:50/ema_0.9999_159000.pt.samples/seed123_step0_adanoise_110_200k_150knpy.json')
-    # calculate_bleu_from_jsonl('../generation_outputs/diffuseq_iwslt14_mol_h128_lr0.0001_t2000_sqrt_lossaware_seed102_seq128_adan_0707_ckpt109k20260707-12:57:50/ema_0.9999_169000.pt.samples/seed123_step0_adanoise_110_200k_150knpy.json')
-    # calculate_bleu_from_jsonl('../generation_outputs/diffuseq_iwslt14_mol_h128_lr0.0001_t2000_sqrt_lossaware_seed102_seq128_adan_0707_ckpt109k20260707-12:57:50/ema_0.9999_179000.pt.samples/seed123_step0_adanoise_110_200k_150knpy.json')
-    # calculate_bleu_from_jsonl('../generation_outputs/diffuseq_iwslt14_mol_h128_lr0.0001_t2000_sqrt_lossaware_seed102_seq128_adan_0707_ckpt109k20260707-12:57:50/ema_0.9999_189000.pt.samples/seed123_step0_adanoise_110_200k_150knpy.json')
-    # calculate_bleu_from_jsonl('../generation_outputs/diffuseq_iwslt14_mol_h128_lr0.0001_t2000_sqrt_lossaware_seed102_seq128_adan_0707_ckpt109k20260707-12:57:50/ema_0.9999_199000.pt.samples/seed123_step0_adanoise_110_200k_150knpy.json')
-    # calculate_bleu_from_jsonl('../generation_outputs/diffuseq_iwslt14_mol_h128_lr0.0001_t2000_sqrt_lossaware_seed102_seq128_adan_0707_ckpt109k20260707-12:57:50/ema_0.9999_200000.pt.samples/seed123_step0_adanoise_110_200k_150knpy.json')
-
-    # calculate_bleu_from_jsonl('../generation_outputs/diffuseq_iwslt14_mol_h128_lr0.0001_t2000_sqrt_lossaware_seed102_seq256_adan_ckpt40k20260720-15:32:52/ema_0.9999_040000.pt.samples/seed123_step0_adanoise_40_70k_50knpy.json')
-    # calculate_bleu_from_jsonl('../generation_outputs/diffuseq_iwslt14_mol_h128_lr0.0001_t2000_sqrt_lossaware_seed102_seq256_adan_ckpt40k20260720-15:32:52/ema_0.9999_050000.pt.samples/seed123_step0_adanoise_40_70k_50knpy.json')
-    # calculate_bleu_from_jsonl('../generation_outputs/diffuseq_iwslt14_mol_h128_lr0.0001_t2000_sqrt_lossaware_seed102_seq256_adan_ckpt40k20260720-15:32:52/ema_0.9999_060000.pt.samples/seed123_step0_adanoise_40_70k_50knpy.json')
-    # calculate_bleu_from_jsonl('../generation_outputs/diffuseq_iwslt14_mol_h128_lr0.0001_t2000_sqrt_lossaware_seed102_seq256_adan_ckpt40k20260720-15:32:52/ema_0.9999_070000.pt.samples/seed123_step0_adanoise_40_70k_50knpy.json')
-
-    # 0.5781 - 189k ckpt with 110.npy
-    # calculate_bleu_from_jsonl('../generation_outputs/diffuseq_iwslt14_mol_h128_lr0.0001_t2000_sqrt_lossaware_seed102_nomix_adanoise_scratch20260809-22:09:06/ema_0.9999_080000.pt.samples/seed123_step0_adanoise_scratchtest1208_20knpy.json')
-    # calculate_bleu_from_jsonl('../generation_outputs/diffuseq_iwslt14_mol_h128_lr0.0001_t2000_sqrt_lossaware_seed102_nomix_adanoise_scratch20260809-22:09:06/ema_0.9999_090000.pt.samples/seed123_step0_adanoise_scratchtest1208_20knpy.json')
-    # calculate_bleu_from_jsonl('../generation_outputs/diffuseq_iwslt14_mol_h128_lr0.0001_t2000_sqrt_lossaware_seed102_nomix_adanoise_scratch20260809-22:09:06/ema_0.9999_100000.pt.samples/seed123_step0_adanoise_scratchtest1208_20knpy.json')
-    # calculate_bleu_from_jsonl('../generation_outputs/diffuseq_iwslt14_mol_h128_lr0.0001_t2000_sqrt_lossaware_seed102_nomix_adanoise_scratch20260809-22:09:06/ema_0.9999_110000.pt.samples/seed123_step0_adanoise_scratchtest1208_20knpy.json')
-    # calculate_bleu_from_jsonl('../generation_outputs/diffuseq_iwslt14_mol_h128_lr0.0001_t2000_sqrt_lossaware_seed102_nomix_adanoise_scratch20260809-22:09:06/ema_0.9999_120000.pt.samples/seed123_step0_adanoise_scratchtest1208_20knpy.json')
-    calculate_bleu_from_jsonl('../generation_outputs/diffuseq_iwslt14_mol_h128_lr0.0001_t2000_sqrt_lossaware_seed102_nomix_adanoise_scratch20260809-22:09:06/ema_0.9999_120000.pt.samples/seed123_step0_adanoise_scratchtest1208_110knpy.json')
-    calculate_bleu_from_jsonl('../generation_outputs/diffuseq_iwslt14_mol_h128_lr0.0001_t2000_sqrt_lossaware_seed102_nomix_adanoise_scratch20260809-22:09:06/ema_0.9999_110000.pt.samples/seed123_step0_adanoise_scratchtest1208_100knpy.json')
-    calculate_bleu_from_jsonl('../generation_outputs/diffuseq_iwslt14_mol_h128_lr0.0001_t2000_sqrt_lossaware_seed102_nomix_adanoise_scratch20260809-22:09:06/ema_0.9999_100000.pt.samples/seed123_step0_adanoise_scratchtest1208_90knpy.json')
-    calculate_bleu_from_jsonl('../generation_outputs/diffuseq_iwslt14_mol_h128_lr0.0001_t2000_sqrt_lossaware_seed102_nomix_adanoise_scratch20260809-22:09:06/ema_0.9999_090000.pt.samples/seed123_step0_adanoise_scratchtest1208_80knpy.json')
+    target_path = args.path or args.path_opt
+    if target_path:
+        calculate_bleu_from_jsonl(target_path)
+    else:
+        # Default test line if no CLI argument provided
+        default_file = '../generation_outputs/diffuseq_iwslt14_mol_h128_lr0.0001_t2000_sqrt_lossaware_seed102_seq128_adan_0707_ckpt109k20260707-12:57:50/ema_0.9999_200000.pt.samples/seed123_step0_best_ckpt_200samp_200k.json'
+        calculate_bleu_from_jsonl(default_file)

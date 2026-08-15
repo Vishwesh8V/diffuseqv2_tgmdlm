@@ -13,3 +13,5 @@ tqdm
 transformers==4.22.2
 wandb
 datasets
+sacrebleu
+mauve-text
